@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>创建房间 - E2EE Node</title>
+    <style>
+        /* iOS 原生设计系统变量 */
+        :root {
+            --ios-bg: #F2F2F7;
+            --ios-card: #FFFFFF;
+            --ios-blue: #0A84FF;
+            --ios-blue-active: #007AFF;
+            --ios-green: #34C759;
+            --ios-red: #FF3B30;
+            --ios-orange: #FF9500;
+            --text-primary: #000000;
+            --text-secondary: #8E8E93;
+            --border-color: rgba(60, 60, 67, 0.1);
+            --ring-track: rgba(0, 0, 0, 0.05);
+        }
+
+        /* 自动暗黑模式适配 */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --ios-bg: #000000;
+                --ios-card: #1C1C1E;
+                --text-primary: #FFFFFF;
+                --border-color: rgba(255, 255, 255, 0.1);
+                --ring-track: rgba(255, 255, 255, 0.1);
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* 核心修改：彻底锁死滚动，锁定视口高度 */
+        html, body {
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh; /* 兼容 Safari 动态工具栏 */
+            overflow: hidden; /* 彻底禁用滚动条 */
+            overscroll-behavior: none; /* 禁用 iOS 橡皮筋回弹效果 */
+            touch-action: manipulation; /* 禁止双击放大 */
+            -webkit-user-select: none; /* 禁用全局长按选中，赋予原生 App 质感 */
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--ios-bg);
+            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center; /* 绝对垂直居中，自适应所有屏幕 */
+            align-items: center;
+            padding: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        /* 内容主容器 */
+        .main-container {
+            width: 100%;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transform: translateY(-5%); /* 视觉重心微微上移 */
+        }
+
+        .header {
+            width: 100%;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            color: var(--text-primary);
+        }
+
+        /* 卡片整体微调，减小内边距防止超屏 */
+        .card {
+            width: 100%;
+            background: var(--ios-card);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+            margin-bottom: 16px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .input-wrapper {
+            position: relative;
+            background: var(--ios-bg);
+            border-radius: 12px;
+            padding: 2px;
+            border: 1px solid var(--border-color);
+        }
+
+        .input-wrapper input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 24px;
+            font-weight: 600;
+            padding: 10px;
+            text-align: center;
+            outline: none;
+        }
+
+        .btn-primary {
+            width: 100%;
+            background: var(--ios-blue);
+            color: #FFFFFF;
+            border: none;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 14px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+
+        .btn-primary:active {
+            transform: scale(0.96);
+            background: var(--ios-blue-active);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* 结果面板 */
+        .result-panel {
+            display: none;
+            text-align: center;
+            animation: slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes slideUpFade {
+            from { opacity: 0; transform: translateY(20px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .result-subtitle {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--ios-green);
+            margin-bottom: 8px;
+        }
+
+        .room-pwd {
+            font-size: 26px;
+            font-weight: 700;
+            font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+            letter-spacing: 1px;
+            color: var(--text-primary);
+            margin-bottom: 20px;
+            /* 唯一允许长按选中的地方，防止用户意外丢失剪贴板 */
+            user-select: all; 
+            -webkit-user-select: all;
+        }
+
+        /* --- 经过缩放调整的 Apple Watch 风格圆形计时器 --- */
+        .circular-timer {
+            position: relative;
+            width: 130px; /* 从 180px 缩小至 130px */
+            height: 130px;
+            margin: 0 auto 10px auto;
+        }
+
+        .circular-timer svg {
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg);
+        }
+
+        /* 圆环半径从 82 缩小至 58，周长 = 2 * PI * 58 = 364.42 */
+        .timer-track, .timer-progress {
+            cx: 65px;
+            cy: 65px;
+            r: 58px;
+            fill: transparent;
+            stroke-width: 8px;
+        }
+
+        .timer-track {
+            stroke: var(--ring-track);
+        }
+
+        .timer-progress {
+            stroke: var(--ios-blue);
+            stroke-linecap: round;
+            transition: stroke-dashoffset 1s linear, stroke 0.5s ease;
+            stroke-dasharray: 364.42; 
+            stroke-dashoffset: 0;
+        }
+
+        .timer-text-container {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .time-value {
+            font-size: 34px; /* 字体缩小 */
+            font-weight: 300;
+            color: var(--text-primary);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .time-label {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        /* Toast 提示 */
+        .toast {
+            position: fixed;
+            top: -60px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(28, 28, 30, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            color: #fff;
+            padding: 12px 20px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: 500;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: top 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+        }
+
+        .toast.show {
+            top: max(env(safe-area-inset-top, 50px), 50px);
+        }
+
+        .toast-icon {
+            color: var(--ios-green);
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="toast" id="toast">
+        <span class="toast-icon">✓</span>
+        <span id="toastMsg">已复制房间直连地址</span>
+    </div>
+
+    <div class="main-container">
+        
+        <div class="header">
+            <h1>创建房间</h1>
+        </div>
+
+        <div class="card control-panel">
+            <div class="input-group">
+                <label>设定房间存活时间 (秒)</label>
+                <div class="input-wrapper">
+                    <input type="number" id="safeTimeInput" value="180" inputmode="numeric">
+                </div>
+            </div>
+            <button class="btn-primary" id="generateBtn" onclick="generateRoom()">创建房间</button>
+        </div>
+
+        <div class="card result-panel" id="resultPanel">
+            <div class="result-subtitle">临时房间已建立</div>
+            <div class="room-pwd" id="pwdDisplay">----------</div>
+
+            <div class="circular-timer">
+                <svg>
+                    <circle class="timer-track"></circle>
+                    <circle class="timer-progress" id="progressRing"></circle>
+                </svg>
+                <div class="timer-text-container">
+                    <div class="time-value" id="countdownText">180</div>
+                    <div class="time-label">距离房间销毁</div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let countdownInterval = null;
+        // 圆环精确周长，匹配 CSS 中的修改
+        const CIRCUMFERENCE = 364.42; 
+
+        // 显示 iOS Toast
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toastMsg');
+            toastMsg.innerText = message;
+            toast.classList.add('show');
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        // 核心：创建房间逻辑
+        async function generateRoom() {
+            const safeTime = parseInt(document.getElementById('safeTimeInput').value) || 180;
+            const btn = document.getElementById('generateBtn');
+            const resultPanel = document.getElementById('resultPanel');
+            const pwdDisplay = document.getElementById('pwdDisplay');
+            
+            // 按钮防抖与加载状态
+            btn.disabled = true;
+            btn.innerText = "正在创建...";
+            resultPanel.style.opacity = '1'; 
+
+            try {
+                // 发起创建请求
+                const response = await fetch('/api/admin/generate_room', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ safe_time: safeTime })
+                });
+
+                if (!response.ok) {
+                    throw new Error("HTTP " + response.status);
+                }
+
+                const data = await response.json();
+                
+                if (data.status === 'ok') {
+                    // 1. 渲染结果 UI
+                    resultPanel.style.display = 'block';
+                    pwdDisplay.innerText = data.room_pwd;
+                    
+                    // 2. 纯净 URL 复制 (去除了附加的中文字符)
+                    const fullUrl = `${window.location.origin}/#${data.room_pwd}`;
+                    
+                    try {
+                        await navigator.clipboard.writeText(fullUrl);
+                        setTimeout(() => showToast("已自动复制完整连接"), 300);
+                    } catch (err) {
+                        console.error("剪贴板写入失败", err);
+                        showToast("已创建，请手动复制房间号");
+                    }
+
+                    // 3. 启动圆形视觉倒计时
+                    startCircularCountdown(safeTime);
+                }
+
+            } catch (error) {
+                console.error(error);
+                alert("创建失败，请确保后端放行了免密请求。");
+            } finally {
+                // 恢复按钮初始状态
+                btn.disabled = false;
+                btn.innerText = "创建房间";
+            }
+        }
+
+        // 核心：圆形计时器引擎
+        function startCircularCountdown(totalSeconds) {
+            let timeLeft = totalSeconds;
+            const textElem = document.getElementById('countdownText');
+            const progressRing = document.getElementById('progressRing');
+            const resultPanel = document.getElementById('resultPanel');
+
+            // UI 初始化复位
+            textElem.innerText = timeLeft;
+            progressRing.style.strokeDashoffset = '0';
+            progressRing.style.stroke = 'var(--ios-blue)';
+            resultPanel.style.opacity = '1';
+
+            // 清理遗留进程
+            if (countdownInterval) clearInterval(countdownInterval);
+
+            countdownInterval = setInterval(() => {
+                timeLeft--;
+                
+                if (timeLeft <= 0) {
+                    // 时间耗尽：塌缩动画
+                    clearInterval(countdownInterval);
+                    textElem.innerText = "0";
+                    progressRing.style.strokeDashoffset = CIRCUMFERENCE; 
+                    progressRing.style.stroke = 'var(--border-color)';
+                    
+                    setTimeout(() => {
+                        resultPanel.style.opacity = '0.4';
+                        resultPanel.style.transition = 'opacity 1s ease';
+                    }, 500);
+                } else {
+                    // 正常更新数值与圆环倒退
+                    textElem.innerText = timeLeft;
+                    
+                    const percentage = timeLeft / totalSeconds;
+                    const offset = CIRCUMFERENCE - (percentage * CIRCUMFERENCE);
+                    progressRing.style.strokeDashoffset = offset;
+
+                    // 时间濒危时的色彩过渡
+                    if (percentage <= 0.2) {
+                        progressRing.style.stroke = 'var(--ios-red)'; 
+                    } else if (percentage <= 0.5) {
+                        progressRing.style.stroke = 'var(--ios-orange)';
+                    }
+                }
+            }, 1000);
+        }
+    </script>
+</body>
+</html>

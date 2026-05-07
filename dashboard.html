@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <title>态势感知控制台</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="/static/chart.js"></script>
+    <style>
+        :root {
+            --bg-deep: #050507;
+            --app-bg: rgba(20, 20, 22, 0.65);
+            --border: rgba(255, 255, 255, 0.08);
+            --border-light: rgba(255, 255, 255, 0.15);
+            
+            --text-main: #f5f5f7;
+            --text-sub: #86868b;
+            --text-muted: #55555a;
+            
+            --cyan: #32d4ff;
+            --purple: #bf5af2;
+            --green: #30d158;
+            --red: #ff453a;
+            --orange: #ff9f0a;
+            
+            --mac-close: #ff5f57;
+            --mac-min: #febc2e;
+            --mac-max: #28c840;
+
+            /* 中文字体 fallback：英文/数字保留 SF Pro / SF Mono，中文走 PingFang / 雅黑 / Noto */
+            --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+            --font-mono: "SF Mono", "Fira Code", "Menlo", "PingFang SC", "Microsoft YaHei", monospace;
+        }
+
+        * { box-sizing: border-box; outline: none; }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+        ::-webkit-scrollbar-corner { background: transparent; }
+
+        /* 钛金属底噪与深邃背景 */
+        html, body { 
+            height: 100vh; width: 100vw; margin: 0; overflow: hidden; 
+            background-color: var(--bg-deep);
+            background-image: 
+                radial-gradient(circle at 50% 0%, rgba(30, 28, 45, 0.8) 0%, transparent 60%),
+                repeating-linear-gradient(45deg, rgba(255,255,255,0.01) 0px, rgba(255,255,255,0.01) 1px, transparent 1px, transparent 4px);
+            font-family: var(--font-ui);
+            display: flex; justify-content: center; align-items: center;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* 登录屏蔽层 */
+        #login-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 1000;
+            display: none; justify-content: center; align-items: center; backdrop-filter: blur(25px);
+        }
+        body.locked #login-overlay { display: flex; }
+        .login-card { width: 260px; text-align: center; }
+        .login-title {
+            color: var(--text-main);
+            letter-spacing: 2px;
+            font-size: 13px;
+            margin: 15px 0 15px;
+            font-weight: 600;
+        }
+        .login-input {
+            width: 100%; background: rgba(0,0,0,0.4); border: 1px solid var(--border-light);
+            color: #fff; padding: 10px; border-radius: 8px; margin: 15px 0; text-align: center; font-size: 14px;
+            font-family: var(--font-mono); letter-spacing: 2px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+            transition: 0.3s;
+        }
+        .login-input:focus { border-color: var(--cyan); background: rgba(255,255,255,0.05); box-shadow: 0 0 15px rgba(50,212,255,0.2), inset 0 2px 4px rgba(0,0,0,0.5); }
+        .login-btn {
+            width: 100%; padding: 8px; font-size: 11px; color: #fff; letter-spacing: 1px;
+        }
+
+        /* 主体窗体 */
+        .mac-app {
+            width: 95vw; max-width: 1100px; height: 85vh; max-height: 680px;
+            background: var(--app-bg); 
+            backdrop-filter: blur(60px) saturate(150%); -webkit-backdrop-filter: blur(60px) saturate(150%);
+            border: 1px solid var(--border); border-top: 1px solid rgba(255,255,255,0.2);
+            border-radius: 12px;
+            display: flex; flex-direction: column;
+            box-shadow: 0 60px 100px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.1);
+            transition: transform 0.5s cubic-bezier(0.2, 1, 0.2, 1), opacity 0.5s ease;
+        }
+        body.locked .mac-app { transform: scale(0.97) translateY(10px); opacity: 0; filter: blur(5px); }
+
+        /* 顶部金属导航栏 */
+        header {
+            height: 46px; padding: 0 14px; display: flex; align-items: center;
+            background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0) 100%);
+            border-bottom: 1px solid rgba(0,0,0,0.5); box-shadow: 0 1px 0 rgba(255,255,255,0.05);
+            flex-shrink: 0; border-top-left-radius: 12px; border-top-right-radius: 12px;
+        }
+
+        .controls { display: flex; gap: 7px; width: 80px; }
+        .controls span { width: 11px; height: 11px; border-radius: 50%; border: 0.5px solid rgba(0,0,0,0.2); box-shadow: inset 0 1px 2px rgba(255,255,255,0.3); }
+        
+        .title-bar { flex: 1; display: flex; align-items: center; justify-content: center; gap: 15px; }
+        .title-bar h1 { 
+            font-size: 12px; color: var(--text-sub); margin: 0; font-weight: 600; 
+            letter-spacing: 0.5px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+        }
+
+        .header-stats { display: flex; gap: 10px; align-items: center; }
+        .stat-bit { font-size: 11px; font-family: var(--font-mono); text-shadow: 0 1px 2px rgba(0,0,0,0.8); margin-right: 4px;}
+        .stat-bit label { color: var(--text-muted); font-size: 10px; margin-right: 4px; font-family: var(--font-ui); font-weight: 700; }
+        .stat-bit b { color: var(--text-main); font-weight: 500; }
+
+        main { flex: 1; overflow: hidden; display: flex; flex-direction: column; background: rgba(0,0,0,0.2); border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; }
+        .table-wrap { flex: 1; overflow-y: overlay; overflow-x: auto; }
+
+        /* 工业级表格架构 */
+        table { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; min-width: 1050px; }
+        th { 
+            position: sticky; top: 0; z-index: 100; 
+            background: rgba(18, 18, 20, 0.85); backdrop-filter: blur(20px);
+            padding: 8px 14px; font-size: 11px; color: var(--text-sub); 
+            text-align: left; border-bottom: 1px solid rgba(0,0,0,0.8);
+            box-shadow: 0 1px 0 rgba(255,255,255,0.05); 
+            letter-spacing: 0;
+            font-weight: 600;
+        }
+        td { padding: 8px 14px; font-size: 12px; color: var(--text-main); vertical-align: middle; border-bottom: 1px solid rgba(255,255,255,0.03); }
+        
+        /* 树状行逻辑 */
+        .row-single { background: transparent; }
+        .row-parent { background: rgba(255,255,255,0.02); cursor: pointer; transition: 0.2s; }
+        .row-parent:hover { background: rgba(255,255,255,0.05); }
+        
+        .row-child { display: none; background: rgba(0,0,0,0.4); }
+        .row-child.expanded { display: table-row; }
+        .row-child td { border-bottom: 1px solid rgba(255,255,255,0.015); box-shadow: inset 0 1px 0 rgba(0,0,0,0.2); }
+        
+        .expander { display: inline-block; width: 14px; transition: transform 0.2s; color: var(--text-muted); font-size: 9px; margin-right: 6px; }
+        .expanded .expander { transform: rotate(90deg); color: var(--cyan); }
+
+        .tree-line {
+            display: inline-block; width: 16px; height: 14px;
+            border-left: 1px solid rgba(255,255,255,0.1); border-bottom: 1px solid rgba(255,255,255,0.1);
+            margin-right: 8px; margin-left: 16px; vertical-align: top; position: relative; top: -5px; border-bottom-left-radius: 4px;
+        }
+
+        /* 基础排版 */
+        .ip-text { font-family: var(--font-mono); font-weight: 600; word-break: break-all; font-size: 12px; }
+        .uid-text { font-family: var(--font-mono); color: var(--cyan); font-size: 11px; }
+        .room-text { color: var(--text-sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; }
+        .time-text { font-family: var(--font-mono); text-align: right; color: var(--text-sub); font-size: 11px; }
+
+        /* 3D亚克力 探针芯片 */
+        .probe-flex { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; min-height: 20px; }
+        .chip { 
+            font-size: 10px; padding: 2px 6px; border-radius: 4px; 
+            background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.02)); color: #fff;
+            border: 1px solid rgba(255,255,255,0.1); font-family: var(--font-mono);
+            white-space: nowrap; box-shadow: inset 0 1px 0 rgba(255,255,255,0.1), 0 2px 4px rgba(0,0,0,0.3);
+            text-shadow: 0 1px 1px rgba(0,0,0,0.8);
+        }
+        .chip i { font-style: normal; color: var(--cyan); font-size: 10px; font-weight: 700; margin-right: 4px; font-family: var(--font-ui); letter-spacing: 0; }
+        .chip.fp { border-color: rgba(191, 90, 242, 0.4); color: #e9d5ff; background: linear-gradient(135deg, rgba(191, 90, 242, 0.15), rgba(191, 90, 242, 0.02)); }
+        .chip.fp i { color: var(--purple); }
+        .chip-null { color: var(--text-muted); font-size: 10px; font-family: var(--font-ui); font-style: italic; }
+
+        /* 状态指示器 */
+        .pill { 
+            font-size: 10px; font-weight: 700; padding: 3px 7px; border-radius: 4px; 
+            letter-spacing: 0; display: inline-block; border: 1px solid transparent;
+        }
+        .p-green { color: var(--green); background: rgba(50, 215, 75, 0.1); border-color: rgba(50, 215, 75, 0.2); }
+        .p-red { color: var(--red); background: rgba(255, 69, 58, 0.1); border-color: rgba(255, 69, 58, 0.2); }
+        .p-gray { color: var(--text-sub); background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.1); }
+
+        /* 精致按钮 */
+        .actions { display: flex; gap: 6px; justify-content: flex-end; }
+        .btn-mac {
+            background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.04));
+            border: 1px solid rgba(0,0,0,0.8); color: var(--text-sub);
+            padding: 4px 9px; border-radius: 5px; font-size: 11px; font-weight: 600; cursor: pointer; transition: 0.2s;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.15), 0 1px 2px rgba(0,0,0,0.3);
+            letter-spacing: 0;
+            font-family: var(--font-ui);
+        }
+        .btn-mac:hover { color: #fff; background: linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0.08)); }
+        .btn-mac:active { box-shadow: inset 0 1px 3px rgba(0,0,0,0.5); background: rgba(255,255,255,0.05); }
+        .btn-danger { color: var(--red); }
+        .btn-success { color: var(--green); }
+        
+        .pulse-box { width: 120px; height: 18px; opacity: 0.8; }
+
+        /* 全局 Toast 通知 */
+        #sys-toast {
+            position: fixed; top: 60px; left: 50%; transform: translateX(-50%) translateY(-10px);
+            background: rgba(30, 30, 35, 0.85); border: 1px solid var(--border-light);
+            color: #fff; padding: 7px 18px; border-radius: 12px; font-size: 12px;
+            font-family: var(--font-ui); font-weight: 600; letter-spacing: 0;
+            backdrop-filter: blur(10px); opacity: 0; pointer-events: none; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 2000; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        #sys-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        /* === 临时房间面板 === */
+        #temp-rooms-panel {
+            padding: 10px 14px;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+            background: rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0; 
+            z-index: 10;
+            position: relative;
+        }
+        /* 空状态提示 */
+        .temp-room-empty {
+            color: var(--text-muted); font-size: 11px; font-family: var(--font-ui);
+            font-style: italic; padding: 4px 0;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .temp-room-empty .pulse-dot {
+            width: 6px; height: 6px; border-radius: 50%; background: var(--text-muted);
+            animation: empty-blink 2s ease-in-out infinite;
+        }
+        @keyframes empty-blink { 50% { opacity: 0.3; } }
+        
+        .temp-diag {
+            position: absolute; top: 10px; right: 14px;
+            font-family: var(--font-mono); font-size: 9px; color: var(--text-muted);
+            letter-spacing: 0; opacity: 0.65; user-select: none;
+        }
+        .temp-diag b { color: var(--cyan); font-weight: 500; }
+        .temp-diag.warn b { color: var(--orange); }
+        .temp-room-header {
+            font-size: 11px; color: var(--cyan); font-weight: 600; letter-spacing: 0.5px;
+            margin-bottom: 8px; display: flex; align-items: center; gap: 6px; text-shadow: 0 0 8px rgba(50,212,255,0.4);
+        }
+        .temp-room-list {
+            display: flex; gap: 10px; flex-wrap: wrap;
+        }
+
+        /* === Lv2 闲置秒表 卡片 === */
+        .temp-room-card {
+            position: relative;
+            overflow: hidden;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border-light);
+            border-radius: 6px;
+            padding: 6px 10px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 220px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.2, 1, 0.2, 1), border-color 0.4s, box-shadow 0.3s;
+            --progress-pct: 0%;
+            --progress-color: var(--cyan);
+        }
+        .temp-room-card::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            width: var(--progress-pct, 0%);
+            background: linear-gradient(90deg, transparent 0%, var(--progress-color) 100%);
+            opacity: 0.16;
+            transition: width 1s linear, background 0.5s ease, opacity 0.3s;
+            pointer-events: none;
+            z-index: 0;
+        }
+        .temp-room-card > * { position: relative; z-index: 1; }
+
+        .temp-room-card.warn { 
+            --progress-color: var(--orange);
+            border-color: rgba(255, 159, 10, 0.35);
+        }
+        .temp-room-card.warn::before { opacity: 0.20; }
+
+        .temp-room-card.danger { 
+            --progress-color: var(--red);
+            border-color: rgba(255, 69, 58, 0.5);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3), 0 0 12px rgba(255, 69, 58, 0.2);
+        }
+        .temp-room-card.danger::before { opacity: 0.28; }
+
+        .trc-pwd {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: color 0.2s;
+        }
+        .trc-pwd:hover { color: var(--cyan); text-decoration: underline; }
+
+        .trc-timer {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--text-sub);
+            margin-left: auto;
+            background: rgba(0,0,0,0.45);
+            padding: 2px 7px;
+            border-radius: 4px;
+            border: 1px solid rgba(255,255,255,0.08);
+            white-space: nowrap;
+            font-weight: 500;
+            transition: border-color 0.4s;
+        }
+        .trc-label {
+            color: var(--text-muted);
+            font-size: 10px;
+            margin-right: 4px;
+            font-family: var(--font-ui);
+            letter-spacing: 0;
+        }
+        .trc-idle {
+            color: var(--green);
+            font-weight: 700;
+            transition: color 0.4s;
+        }
+        .warn .trc-idle { color: var(--orange); }
+        .danger .trc-idle { color: var(--red); animation: idle-blink 1s infinite; }
+        .warn .trc-timer { border-color: rgba(255, 159, 10, 0.3); }
+        .danger .trc-timer { border-color: rgba(255, 69, 58, 0.4); }
+        .trc-cap-sep { color: var(--text-muted); margin: 0 4px; }
+        .trc-cap { color: var(--text-muted); font-size: 10px; font-weight: 500; }
+
+        @keyframes idle-blink { 50% { opacity: 0.55; } }
+
+        .temp-room-card.entering {
+            animation: card-enter 0.45s cubic-bezier(0.2, 1, 0.2, 1);
+        }
+        @keyframes card-enter {
+            from { opacity: 0; transform: translateY(-6px) scale(0.94); }
+            to { opacity: 1; transform: none; }
+        }
+        .temp-room-card.fading-out {
+            opacity: 0;
+            transform: translateX(-8px) scale(0.94);
+        }
+
+        @keyframes reset-pulse {
+            0%   { box-shadow: 0 0 0 0 rgba(50, 212, 255, 0.55), 0 2px 5px rgba(0,0,0,0.3); transform: scale(1); }
+            40%  { box-shadow: 0 0 0 14px rgba(50, 212, 255, 0), 0 2px 5px rgba(0,0,0,0.3); transform: scale(1.035); }
+            100% { box-shadow: 0 0 0 0 rgba(50, 212, 255, 0), 0 2px 5px rgba(0,0,0,0.3); transform: scale(1); }
+        }
+        .temp-room-card.pulse-reset {
+            animation: reset-pulse 0.75s cubic-bezier(0.2, 1, 0.2, 1);
+        }
+
+        /* === 时间输入框样式 === */
+        .time-input-wrap {
+            display: flex; align-items: center; background: rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 5px; 
+            padding: 2px 6px; margin-right: 2px;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.5);
+        }
+        .time-input-wrap input {
+            width: 36px; background: transparent; border: none; color: var(--cyan);
+            font-family: var(--font-mono); font-size: 11px; text-align: center;
+            outline: none; -moz-appearance: textfield; font-weight: 600;
+        }
+        .time-input-wrap input::-webkit-outer-spin-button,
+        .time-input-wrap input::-webkit-inner-spin-button {
+            -webkit-appearance: none; margin: 0;
+        }
+        .time-input-wrap span {
+            color: var(--text-muted); font-size: 10px; font-weight: 700; margin-left: 2px;
+        }
+    </style>
+</head>
+<body class="locked">
+
+<div id="sys-toast"></div>
+
+<div id="login-overlay">
+    <div class="login-card">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--text-main)" stroke-width="1.5" style="opacity:0.8"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+        <h2 class="login-title">内核认证</h2>
+        <input type="password" id="pass-in" class="login-input" placeholder="请输入密钥">
+        <button class="btn-mac login-btn" onclick="startLogin()">解锁</button>
+    </div>
+</div>
+
+<div class="mac-app">
+    <header>
+        <div class="controls">
+            <span style="background:var(--mac-close)"></span>
+            <span style="background:var(--mac-min)"></span>
+            <span style="background:var(--mac-max)"></span>
+        </div>
+        <div class="title-bar">
+            <h1>态势感知引擎 · V6</h1>
+            <div class="pulse-box"><canvas id="pulseChart"></canvas></div>
+        </div>
+        <div class="header-stats">
+            <div class="stat-bit"><label>节点</label><b id="v-ips">0</b></div>
+            <div class="stat-bit"><label>会话</label><b id="v-users">0</b></div>
+            
+            <div style="width:1px; height:16px; background:rgba(255,255,255,0.1); margin:0 2px;"></div>
+            
+            <button class="btn-mac" id="btn-lock" onclick="setLockMode(true)" title="锁定:仅允许已登记的临时通道接入">🔒 上锁</button>
+            <button class="btn-mac" id="btn-unlock" onclick="setLockMode(false)" title="解锁:允许未知房间接入">🔓 解锁</button>
+            
+            <!-- 存活时间输入框 -->
+            <div class="time-input-wrap" title="临时通道闲置销毁时间(秒)">
+                <input type="number" id="in-safe-time" value="180" min="10" max="86400">
+                <span>秒</span>
+            </div>
+            <button class="btn-mac" style="color:var(--cyan)" onclick="generateTempRoom(this)" title="生成限时随机通道">⚡ 新建房间</button>
+            
+            <!-- 全体转移按钮 -->
+            <button class="btn-mac" style="color:var(--purple); margin-left: 6px;" onclick="triggerSpaceJump()" title="全员强制转移至随机新房间">🌀 全体转移</button>
+            
+            <!-- 紧急暂停按钮 -->
+            <button class="btn-mac btn-danger" id="btn-halt" style="margin-left: 6px;" onclick="shutdownServer()" title="紧急暂停:清退全员并封锁外部接入">紧急暂停</button>
+        </div>
+    </header>
+
+    <main>
+        <div id="temp-rooms-panel">
+            <div class="temp-diag" id="temp-diag" title="后端返回的临时房间数 / 客户端与服务端时钟偏移 / 上次拉取时间">通道 <b id="diag-count">-</b> · 偏移 <b id="diag-skew">-</b>ms · 拉取 <b id="diag-tick">-</b></div>
+            <div class="temp-room-header">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                活跃临时通道
+            </div>
+            <div class="temp-room-list" id="temp-room-list">
+                <!-- 动态填充 -->
+            </div>
+        </div>
+
+        <div class="table-wrap">
+            <table id="main-table">
+                <colgroup>
+                    <col style="width: 250px;"> <col style="width: 100px;"> <col style="width: 120px;"> <col style="width: auto;">  <col style="width: 90px;">  <col style="width: 90px;">  <col style="width: 150px;"> </colgroup>
+                <thead>
+                    <tr>
+                        <th>终端层级</th>
+                        <th>会话</th>
+                        <th>房间</th>
+                        <th>态势感知</th>
+                        <th style="text-align:right">在线时长</th>
+                        <th style="text-align:center">状态</th>
+                        <th style="text-align:right">控制</th>
+                    </tr>
+                </thead>
+                <tbody id="table-body"></tbody>
+            </table>
+        </div>
+    </main>
+</div>
+
+<script>
+    const $ = id => document.getElementById(id);
+    let SESSION_TOKEN = sessionStorage.getItem('neon_sess_v1');
+    let expandedIps = new Set(); 
+
+    // 时钟校准:服务器时间 - 客户端时间(秒)。每次 fetchData 用 server_ts 重新校准
+    let clientClockOffset = 0;
+
+    function getServerNow() {
+        return Date.now() / 1000 - clientClockOffset;
+    }
+
+    function fmtMMSS(seconds) {
+        seconds = Math.max(0, Math.floor(seconds));
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+
+    function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    let toastTimer;
+    function showToast(msg, color = 'var(--cyan)') {
+        const el = $('sys-toast');
+        el.innerHTML = msg;
+        el.style.borderColor = color;
+        el.style.color = color;
+        el.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => el.classList.remove('show'), 3500);
+    }
+
+    let currentLockState = null;
+    function updateLockUI(isLocked) {
+        if (currentLockState === isLocked) return;
+        currentLockState = isLocked;
+
+        const btnLock = $('btn-lock');
+        const btnUnlock = $('btn-unlock');
+        if(isLocked) {
+            btnLock.style.color = 'var(--orange)';
+            btnLock.style.background = 'rgba(255, 159, 10, 0.15)';
+            btnLock.style.borderColor = 'rgba(255, 159, 10, 0.3)';
+            btnUnlock.style.color = 'var(--text-sub)';
+            btnUnlock.style.background = '';
+            btnUnlock.style.borderColor = 'rgba(0,0,0,0.8)';
+        } else {
+            btnUnlock.style.color = 'var(--green)';
+            btnUnlock.style.background = 'rgba(48, 209, 88, 0.15)';
+            btnUnlock.style.borderColor = 'rgba(48, 209, 88, 0.3)';
+            btnLock.style.color = 'var(--text-sub)';
+            btnLock.style.background = '';
+            btnLock.style.borderColor = 'rgba(0,0,0,0.8)';
+        }
+    }
+
+    let currentHaltState = null;
+    function updateHaltUI(isHalted) {
+        if (currentHaltState === isHalted) return;
+        currentHaltState = isHalted;
+        
+        const btnHalt = $('btn-halt');
+        if (isHalted) {
+            btnHalt.innerHTML = '🟢 恢复运行';
+            btnHalt.classList.remove('btn-danger');
+            btnHalt.classList.add('btn-success');
+            btnHalt.title = "解除紧急暂停,恢复外部接入";
+            btnHalt.style.boxShadow = "0 0 10px rgba(48, 209, 88, 0.3)";
+        } else {
+            btnHalt.innerHTML = '紧急暂停';
+            btnHalt.classList.remove('btn-success');
+            btnHalt.classList.add('btn-danger');
+            btnHalt.title = "紧急暂停:清退全员并封锁外部接入";
+            btnHalt.style.boxShadow = "";
+        }
+    }
+
+    async function startLogin() {
+        const pwd = $('pass-in').value.trim();
+        if(!pwd) return;
+        try {
+            const pwdBuf = new TextEncoder().encode(pwd);
+            const hashBuf = await window.crypto.subtle.digest('SHA-256', pwdBuf);
+            const clientKey = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
+            const res = await fetch('/api/auth/login', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ client_key: clientKey })
+            });
+            if(!res.ok) throw new Error();
+            const { token } = await res.json();
+            SESSION_TOKEN = token;
+            sessionStorage.setItem('neon_sess_v1', token);
+            document.body.classList.remove('locked');
+            fetchData();
+        } catch(e) { 
+            const card = document.querySelector('.login-card');
+            card.style.transform = 'translateX(-8px)';
+            setTimeout(()=>card.style.transform='translateX(8px)', 50);
+            setTimeout(()=>card.style.transform='translateX(0)', 100);
+        }
+    }
+
+    const ctx = $('pulseChart').getContext('2d');
+    const chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: Array(30).fill(''),
+            datasets: [{
+                borderColor: 'rgba(50,212,255,0.8)', borderWidth: 1.2, pointRadius: 0, tension: 0.4,
+                data: Array(30).fill(0), fill: true, backgroundColor: 'rgba(50,212,255, 0.1)'
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: { x: { display: false }, y: { display: false, min: 0 } },
+            animation: { duration: 0 } 
+        }
+    });
+
+    let lastTotalMsg = null, lastTime = Date.now();
+
+    function buildProbeHtml(device_info) {
+        let html = `<div class="probe-flex">`;
+        if(device_info && device_info.os) {
+            html += `<span class="chip"><i>系统</i>${escapeHtml(device_info.os)}</span>`;
+            html += `<span class="chip"><i>浏览器</i>${escapeHtml(device_info.browser)}</span>`;
+            html += `<span class="chip"><i>硬件</i>${escapeHtml(String(device_info.cpu))}核/${escapeHtml(String(device_info.ram))}G</span>`;
+            html += `<span class="chip fp" title="${escapeHtml(device_info.canvasHash || '')}"><i>指纹</i>${device_info.canvasHash ? escapeHtml(device_info.canvasHash.slice(0,8)) : 'N/A'}</span>`;
+        } else {
+            html += `<span class="chip-null">等待态势数据…</span>`;
+        }
+        html += `</div>`;
+        return html;
+    }
+
+    // === Lv2 闲置秒表:增量渲染 + 重置脉冲 ===
+    function createTempRoomCard(room) {
+        const card = document.createElement('div');
+        card.className = 'temp-room-card entering';
+        card.dataset.pwd = room.pwd;
+        card.dataset.lastActive = room.last_active_ts;
+        card.dataset.safeTime = room.safe_time;
+
+        card.innerHTML = `
+            <span class="trc-pwd" title="点击复制通道链接">${escapeHtml(room.pwd)}</span>
+            <span class="trc-timer">
+                <span class="trc-label">闲置</span><b class="trc-idle">00:00</b><span class="trc-cap-sep">/</span><span class="trc-cap">00:00</span>
+            </span>
+        `;
+
+        card.querySelector('.trc-pwd').addEventListener('click', () => {
+            const url = window.location.origin + '/#' + room.pwd;
+            navigator.clipboard.writeText(url).then(() => {
+                showToast(`🔗 已复制通道链接:${escapeHtml(room.pwd)}`);
+            });
+        });
+
+        // 入场动画结束后移除 entering 防止后续 transform 被锁
+        setTimeout(() => card.classList.remove('entering'), 500);
+        return card;
+    }
+
+    function triggerResetPulse(card) {
+        card.classList.remove('pulse-reset');
+        // 强制 reflow 让动画从头播
+        void card.offsetWidth;
+        card.classList.add('pulse-reset');
+    }
+
+    function tickIdleTimers() {
+        const now = getServerNow();
+        document.querySelectorAll('#temp-room-list .temp-room-card').forEach(card => {
+            if (card.classList.contains('fading-out')) return;
+            const lat = parseFloat(card.dataset.lastActive);
+            const st = parseInt(card.dataset.safeTime);
+            if (!Number.isFinite(lat) || !Number.isFinite(st) || st <= 0) return;
+
+            const idle = Math.max(0, now - lat);
+            const pct = Math.min(100, (idle / st) * 100);
+
+            const idleEl = card.querySelector('.trc-idle');
+            const capEl = card.querySelector('.trc-cap');
+            if (idleEl) idleEl.textContent = fmtMMSS(idle);
+            if (capEl) capEl.textContent = fmtMMSS(st);
+
+            card.style.setProperty('--progress-pct', pct.toFixed(1) + '%');
+
+            // 阈值变色:80%+ danger,50%+ warn
+            card.classList.remove('warn', 'danger');
+            if (pct >= 80) card.classList.add('danger');
+            else if (pct >= 50) card.classList.add('warn');
+        });
+    }
+
+    function renderTempRooms(temp_rooms) {
+        const tempList = $('temp-room-list');
+
+        // 诊断版:面板永久显示。空数据时移除卡片但保留空状态提示
+        if (!temp_rooms || temp_rooms.length === 0) {
+            tempList.querySelectorAll('.temp-room-card').forEach(c => c.remove());
+            if (!tempList.querySelector('.temp-room-empty')) {
+                tempList.innerHTML = '<div class="temp-room-empty"><span class="pulse-dot"></span>暂无活跃临时通道(创建后将在此显示闲置秒表)</div>';
+            }
+            return;
+        }
+
+        // 有数据:移除空状态提示
+        const emptyEl = tempList.querySelector('.temp-room-empty');
+        if (emptyEl) emptyEl.remove();
+
+        const incomingPwds = new Set(temp_rooms.map(r => r.pwd));
+
+        // 1) 移除已不存在的卡片(淡出)
+        tempList.querySelectorAll('.temp-room-card').forEach(card => {
+            if (!incomingPwds.has(card.dataset.pwd) && !card.classList.contains('fading-out')) {
+                card.classList.add('fading-out');
+                setTimeout(() => card.remove(), 400);
+            }
+        });
+
+        // 2) upsert:存在则更新数据(并检测重置脉冲),不存在则创建
+        temp_rooms.forEach(room => {
+            const escSel = (window.CSS && CSS.escape) ? CSS.escape(room.pwd) : room.pwd;
+            let card = tempList.querySelector(`.temp-room-card[data-pwd="${escSel}"]`);
+
+            if (!card) {
+                card = createTempRoomCard(room);
+                tempList.appendChild(card);
+            } else {
+                // 检测 last_active_ts 跳变 → 有人聊天 → 触发重置脉冲
+                const prevLat = parseFloat(card.dataset.lastActive);
+                if (Number.isFinite(prevLat) && room.last_active_ts > prevLat + 0.5) {
+                    triggerResetPulse(card);
+                }
+                card.dataset.lastActive = room.last_active_ts;
+                card.dataset.safeTime = room.safe_time;
+            }
+        });
+
+        // 立即刷一次显示,不等下一秒滴答
+        tickIdleTimers();
+    }
+
+    async function fetchData() {
+        if (!SESSION_TOKEN) return;
+        try {
+            const res = await fetch(`/api/stats`, { headers: { 'x-session-token': SESSION_TOKEN } });
+            if(res.status === 401) { document.body.classList.add('locked'); return; }
+            const data = await res.json();
+
+            // 时钟校准:用服务器时间纠正客户端时钟漂移
+            if (typeof data.server_ts === 'number') {
+                clientClockOffset = (Date.now() / 1000) - data.server_ts;
+            }
+            
+            if (typeof data.is_locked !== 'undefined') {
+                updateLockUI(data.is_locked);
+            }
+            if (typeof data.is_halted !== 'undefined') {
+                updateHaltUI(data.is_halted);
+            }
+
+            // 恢复真实的 TPS (吞吐量) 计算，用于驱动折线图
+            const now = Date.now();
+            let tps = lastTotalMsg !== null ? (data.total_msgs - lastTotalMsg) / ((now - lastTime) / 1000) : 0;
+            lastTotalMsg = data.total_msgs; 
+            lastTime = now;
+
+            chart.data.datasets[0].data.push(tps);
+            chart.data.datasets[0].data.shift();
+            // 超过阈值变红报警
+            if(tps > 5) { 
+                chart.data.datasets[0].borderColor = '#ff453a'; 
+                chart.data.datasets[0].backgroundColor = 'rgba(255,69,58,0.1)'; 
+            } else { 
+                chart.data.datasets[0].borderColor = 'rgba(50,212,255,0.8)'; 
+                chart.data.datasets[0].backgroundColor = 'rgba(50,212,255,0.1)'; 
+            }
+            chart.update('none');
+
+            const grouped = {};
+            data.users.forEach(u => {
+                if(!grouped[u.ip]) grouped[u.ip] = { sessions: [], isIpBanned: false };
+                grouped[u.ip].sessions.push(u); 
+            });
+            if (data.banned_ips_list) {
+                data.banned_ips_list.forEach(ip => {
+                    if(!grouped[ip]) grouped[ip] = { sessions: [], isIpBanned: true };
+                    else grouped[ip].isIpBanned = true;
+                });
+            }
+
+            $('v-users').innerText = data.online_count;
+            $('v-ips').innerText = Object.keys(grouped).length;
+
+            renderTree(grouped);
+
+            // === 增量渲染临时房间面板(替代旧的 innerHTML 全量重写)===
+            renderTempRooms(data.temp_rooms);
+
+            // === 诊断角标 & 控制台日志 ===
+            const diagCount = $('diag-count');
+            const diagSkew = $('diag-skew');
+            const diagTick = $('diag-tick');
+            const diagWrap = $('temp-diag');
+            const cnt = (data.temp_rooms && data.temp_rooms.length) || 0;
+            if (diagCount) diagCount.textContent = cnt;
+            if (typeof data.server_ts === 'number') {
+                if (diagSkew) diagSkew.textContent = Math.round(clientClockOffset * 1000);
+                if (diagWrap) diagWrap.classList.toggle('warn', cnt === 0);
+            } else {
+                // 后端没下发 server_ts → main.py 不是新版!这是关键诊断信号
+                if (diagSkew) diagSkew.textContent = 'N/A';
+                if (diagWrap) diagWrap.classList.add('warn');
+            }
+            if (diagTick) {
+                const d = new Date();
+                diagTick.textContent = `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+            }
+
+        } catch(e) { console.error(e); }
+    }
+
+    function renderTree(grouped) {
+        const tbody = $('table-body');
+        tbody.innerHTML = ''; 
+
+        Object.keys(grouped).sort().forEach(ip => {
+            const group = grouped[ip];
+            
+            if (group.sessions.length === 1 && !group.isIpBanned) {
+                const u = group.sessions[0];
+                const tr = document.createElement('tr');
+                tr.className = 'row-single';
+                tr.innerHTML = `
+                    <td><span class="ip-text">${ip}</span></td>
+                    <td class="uid-text">${u.uid.slice(0,8)}</td>
+                    <td class="room-text" title="${escapeHtml(u.room)}">${escapeHtml(u.room)}</td>
+                    <td>${buildProbeHtml(u.device_info)}</td>
+                    <td class="time-text">${u.online_time}秒</td>
+                    <td style="text-align:center"><span class="pill ${u.is_banned ? 'p-red' : 'p-green'}">${u.is_banned ? '已封ID' : '在线'}</span></td>
+                    <td>
+                        <div class="actions">
+                            <button class="btn-mac ${u.is_banned ? 'btn-success' : 'btn-danger'}" onclick="toggleBan('${u.uid}','uid',${u.is_banned})">${u.is_banned ? '解封' : '封禁'}</button>
+                            <button class="btn-mac btn-danger" onclick="toggleBan('${ip}','ip',false)">封IP</button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+                return;
+            }
+
+            const isExpanded = expandedIps.has(ip);
+            
+            const pTr = document.createElement('tr');
+            pTr.className = `row-parent ${isExpanded ? 'expanded' : ''}`;
+            pTr.onclick = () => {
+                if (expandedIps.has(ip)) expandedIps.delete(ip);
+                else expandedIps.add(ip);
+                renderTree(grouped);
+            };
+
+            pTr.innerHTML = `
+                <td>
+                    <span class="expander">▶</span>
+                    <span class="ip-text">${ip}</span>
+                    <span style="font-size:10px; color:var(--text-muted); margin-left:6px;">(${group.sessions.length})</span>
+                </td>
+                <td></td><td></td>
+                <td><span style="color:var(--text-muted); font-size:10px; font-family:var(--font-ui)">[ 已折叠 ]</span></td>
+                <td></td>
+                <td style="text-align:center"><span class="pill ${group.isIpBanned ? 'p-red' : 'p-gray'}">${group.isIpBanned ? '已封IP' : '干净'}</span></td>
+                <td>
+                    <div class="actions">
+                        <button class="btn-mac ${group.isIpBanned ? 'btn-success' : 'btn-danger'}" onclick="event.stopPropagation(); toggleBan('${ip}','ip',${group.isIpBanned})">
+                            ${group.isIpBanned ? '解IP' : '封IP'}
+                        </button>
+                    </div>
+                </td>
+            `;
+            tbody.appendChild(pTr);
+
+            group.sessions.forEach(u => {
+                const cTr = document.createElement('tr');
+                cTr.className = `row-child ${isExpanded ? 'expanded' : ''}`;
+                
+                cTr.innerHTML = `
+                    <td><span class="tree-line"></span><span style="color:var(--text-muted); font-size:10px; font-weight:600;">节点</span></td>
+                    <td class="uid-text">${u.uid.slice(0,8)}</td>
+                    <td class="room-text" title="${escapeHtml(u.room)}">${escapeHtml(u.room)}</td>
+                    <td>${buildProbeHtml(u.device_info)}</td>
+                    <td class="time-text">${u.online_time}秒</td>
+                    <td style="text-align:center"><span class="pill ${u.is_banned ? 'p-red' : 'p-green'}">${u.is_banned ? '已封ID' : '活跃'}</span></td>
+                    <td>
+                        <div class="actions">
+                            <button class="btn-mac ${u.is_banned ? 'btn-success' : 'btn-danger'}" onclick="toggleBan('${u.uid}','uid',${u.is_banned})">${u.is_banned ? '解ID' : '封ID'}</button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(cTr);
+            });
+        });
+    }
+
+    window.toggleBan = async (target, type, isCurrentlyBanned) => {
+        const action = isCurrentlyBanned ? 'unban' : 'ban';
+        await fetch(`/api/ban`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'x-session-token': SESSION_TOKEN },
+            body: JSON.stringify({ target, action, type })
+        });
+        fetchData();
+    }
+
+    window.setLockMode = async (isLocked) => {
+        if (!SESSION_TOKEN) return;
+        try {
+            const res = await fetch(`/api/admin/lock_mode`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-session-token': SESSION_TOKEN },
+                body: JSON.stringify({ lock: isLocked })
+            });
+            const data = await res.json();
+            if (data.status === 'ok') {
+                showToast(isLocked ? "🔒 已上锁:执行 IFRAME 伪装清退未授权连接" : "🔓 解除拦截:允许未知房间接入", isLocked ? 'var(--orange)' : 'var(--green)');
+                updateLockUI(data.locked);
+                fetchData();
+            }
+        } catch(e) { console.error(e); }
+    }
+
+    // 提取输入框内的参数并发送 JSON Payload
+    window.generateTempRoom = async (btn) => {
+        if (!SESSION_TOKEN) return;
+        
+        const safeTimeVal = parseInt($('in-safe-time').value) || 180;
+
+        try {
+            const res = await fetch(`/api/admin/generate_room`, {
+                method: 'POST', 
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'x-session-token': SESSION_TOKEN 
+                },
+                body: JSON.stringify({ safe_time: safeTimeVal })
+            });
+            const data = await res.json();
+            if (data.status === 'ok') {
+                const roomUrl = window.location.origin + "/#" + data.room_pwd;
+                await navigator.clipboard.writeText(roomUrl);
+                
+                showToast(`🔗 已复制通道:${data.room_pwd} [闲置上限 ${safeTimeVal} 秒]`, 'var(--cyan)');
+                
+                try { new Audio('/static/ios-bell.mp3').play(); } catch(e){}
+                
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '✔ 已复制';
+                btn.style.color = 'var(--green)';
+                btn.style.borderColor = 'rgba(48, 209, 88, 0.4)';
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.style.color = 'var(--cyan)';
+                    btn.style.borderColor = 'rgba(0,0,0,0.8)';
+                }, 2000);
+            }
+        } catch(e) { console.error(e); }
+    }
+
+    // 空间跳跃核心逻辑 (携带 safe_time 参数)
+    window.triggerSpaceJump = async () => {
+        if (!SESSION_TOKEN) return;
+        if(!confirm("⚠️ 警告：是否启动全体转移？\n\n此操作将强行把当前所有在线用户转移至一个全新的随机房间，旧通道将被彻底抛弃和抹除。")) return;
+        
+        // 1. 获取输入框的存活时间，如果没有或无效则回退至 180 秒
+        const safeTimeVal = parseInt($('in-safe-time').value) || 180;
+
+        try {
+            const res = await fetch(`/api/admin/space_jump`, { 
+                method: 'POST', 
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'x-session-token': SESSION_TOKEN 
+                },
+                body: JSON.stringify({ safe_time: safeTimeVal }) // 2. 传递参数给后端
+            });
+            const data = await res.json();
+            
+            if (data.status === 'ok') {
+                showToast(`🌀 跃迁成功！已将 ${data.targets_moved} 个终端迁往新维度: ${data.new_room} (存活 ${safeTimeVal}s)`, "var(--purple)");
+                fetchData();
+            } else {
+                showToast("❌ 跃迁失败", "var(--red)");
+            }
+        } catch(e) {
+            console.error("空间跳跃错误:", e);
+            showToast("❌ 指令发送失败 / 网络已断开", "var(--red)");
+        }
+    };
+
+    window.shutdownServer = async () => {
+        if (!SESSION_TOKEN) return;
+        
+        const actionText = currentHaltState 
+            ? "解除紧急暂停?\n\n确认恢复系统的外部接入通道?" 
+            : "⚠️ 启用紧急暂停?\n\n警告:此操作将瞬间清退全站用户、抹除白名单,并触发底层断网封锁!";
+            
+        if(!confirm(actionText)) return;
+        
+        try {
+            const res = await fetch(`/api/admin/shutdown`, { method: 'POST', headers: { 'x-session-token': SESSION_TOKEN } });
+            const data = await res.json();
+            
+            if (data.status === 'ok') {
+                if (data.action === 'halted') {
+                    showToast("🚨 指令已下达:系统已彻底封锁,连接斩断中!", "var(--red)");
+                    updateLockUI(true);
+                    
+                    const appPanel = document.querySelector('.mac-app');
+                    const originalBoxShadow = appPanel.style.boxShadow;
+                    appPanel.style.boxShadow = "0 60px 100px rgba(255, 69, 58, 0.4), inset 0 1px 0 rgba(255,255,255,0.1)";
+                    setTimeout(() => {
+                        appPanel.style.boxShadow = originalBoxShadow || "0 60px 100px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.1)";
+                    }, 800);
+                } else {
+                    showToast("✅ 指令已下达:紧急暂停解除,大门重新开启!", "var(--green)");
+                }
+                
+                fetchData();
+            }
+        } catch(e) {
+            console.error("HALT 切换错误:", e);
+            showToast("❌ 指令发送失败 / 网络已断开", "var(--red)");
+        }
+    }
+
+    if (SESSION_TOKEN) {
+        document.body.classList.remove('locked');
+        fetchData(); 
+    }
+    
+    // 主数据轮询(每 2 秒)
+    setInterval(fetchData, 2000);
+
+    // === Lv2 闲置秒表本地滴答(每秒,独立于主轮询)===
+    setInterval(tickIdleTimers, 1000);
+</script>
+</body>
+</html>

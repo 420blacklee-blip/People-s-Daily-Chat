@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <!-- 原生 APP 级 Meta 配置 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#000000">
+    <title>态势控制台</title>
+    
+    <style>
+        :root {
+            /* iOS 规范深色色彩 */
+            --bg-base: #000000;
+            --bg-elevated: #1C1C1E;
+            --bg-elevated-hover: #2C2C2E;
+            --separator: rgba(84, 84, 88, 0.65);
+            
+            --blue: #0A84FF;
+            --green: #30D158;
+            --orange: #FF9F0A;
+            --red: #FF453A;
+            --purple: #BF5AF2;
+            --cyan: #32D4FF;
+            
+            --label-primary: #FFFFFF;
+            --label-secondary: #EBEBF599; /* 60% opacity */
+            --label-tertiary: #EBEBF54D;  /* 30% opacity */
+
+            --font-ui: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif;
+            --font-mono: "SF Mono", "SF Pro Rounded", monospace;
+
+            --safe-top: env(safe-area-inset-top, 44px);
+            --safe-bottom: env(safe-area-inset-bottom, 34px);
+        }
+
+        * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; margin: 0; padding: 0; }
+        ::-webkit-scrollbar { display: none; }
+
+        body, html { 
+            height: 100%; width: 100vw; background-color: var(--bg-base);
+            font-family: var(--font-ui); color: var(--label-primary);
+            -webkit-font-smoothing: antialiased; overflow: hidden;
+        }
+
+        /* 按压回弹动效 (iOS Click Physics) */
+        .tap-effect { transition: transform 0.15s cubic-bezier(0.2, 1, 0.3, 1), opacity 0.15s; }
+        .tap-effect:active { transform: scale(0.94); opacity: 0.8; }
+
+        /* ================= 登录页 ================= */
+        #login-overlay {
+            position: fixed; inset: 0; z-index: 9999; background: var(--bg-base);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            transition: opacity 0.4s;
+        }
+        body:not(.locked) #login-overlay { opacity: 0; pointer-events: none; display: none; }
+        .login-box { width: 85%; max-width: 320px; }
+        .app-icon { width: 72px; height: 72px; background: linear-gradient(135deg, var(--cyan), var(--blue)); border-radius: 18px; margin: 0 auto 24px; display: flex; justify-content: center; align-items: center; box-shadow: 0 10px 30px rgba(10, 132, 255, 0.3); }
+        .app-icon svg { width: 36px; height: 36px; color: #fff; }
+        .login-title { font-size: 24px; font-weight: 700; text-align: center; margin-bottom: 30px; letter-spacing: 0.5px; }
+        /* 修复输入法BUG：去掉 inputmode="numeric" */
+        .ios-input {
+            width: 100%; background: var(--bg-elevated); color: var(--label-primary);
+            border: 1px solid var(--separator); padding: 18px; border-radius: 14px;
+            font-size: 17px; text-align: center; font-family: var(--font-mono); letter-spacing: 2px;
+            margin-bottom: 20px; transition: 0.2s; -webkit-appearance: none;
+        }
+        .ios-input:focus { border-color: var(--blue); background: #242426; }
+        .ios-btn-primary {
+            width: 100%; background: var(--blue); color: #fff; border: none; padding: 18px;
+            border-radius: 14px; font-size: 17px; font-weight: 600; text-align: center; cursor: pointer;
+        }
+
+        /* ================= 主应用区 ================= */
+        #app { height: 100%; display: flex; flex-direction: column; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: var(--safe-bottom); }
+        body.locked #app { display: none; }
+
+        /* --- 遥控器：控制中心 (Control Center) --- */
+        .control-center { padding: calc(var(--safe-top) + 10px) 16px 20px 16px; display: flex; flex-direction: column; gap: 16px; }
+        
+        .cc-row { display: flex; gap: 16px; }
+        .cc-card { 
+            background: var(--bg-elevated); border-radius: 20px; padding: 16px; 
+            display: flex; flex-direction: column; justify-content: center;
+        }
+        
+        /* 数据统计与门禁卡片 */
+        .stats-card { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+        .stat-line { display: flex; justify-content: space-between; font-size: 15px; font-weight: 500; }
+        .stat-val { font-family: var(--font-mono); font-weight: 700; color: var(--cyan); }
+        
+        .lock-card { flex: 1; align-items: center; text-align: center; background: rgba(255,159,10,0.15); color: var(--orange); border: 2px solid transparent; }
+        .lock-card.unlocked { background: rgba(48,209,88,0.15); color: var(--green); }
+        .lock-icon { font-size: 28px; margin-bottom: 4px; }
+        .lock-text { font-size: 13px; font-weight: 600; }
+
+        /* 核心：巨型新建房间模块 */
+        .cc-main-action { 
+            background: linear-gradient(135deg, #1C1C1E 0%, #2C2C2E 100%); 
+            border-radius: 24px; padding: 20px; 
+            display: flex; flex-direction: column; gap: 16px; 
+            border: 1px solid rgba(255,255,255,0.05);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .main-action-header { display: flex; justify-content: space-between; align-items: center; }
+        .main-action-title { font-size: 18px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+        .time-stepper { display: flex; align-items: center; background: rgba(0,0,0,0.3); border-radius: 12px; padding: 4px; }
+        .time-input { width: 50px; background: transparent; border: none; color: var(--cyan); text-align: center; font-family: var(--font-mono); font-size: 17px; font-weight: 600; }
+        .time-label { color: var(--label-secondary); font-size: 13px; padding-right: 8px; }
+        
+        .btn-massive {
+            background: linear-gradient(90deg, var(--cyan), var(--blue));
+            color: #fff; border: none; border-radius: 18px; padding: 20px;
+            font-size: 20px; font-weight: 700; text-align: center; width: 100%;
+            box-shadow: 0 8px 20px rgba(10, 132, 255, 0.4);
+            display: flex; justify-content: center; align-items: center; gap: 10px;
+        }
+
+        /* 战术控制按钮 */
+        .btn-large { flex: 1; border: none; border-radius: 18px; padding: 16px 10px; font-size: 15px; font-weight: 600; color: #fff; display: flex; flex-direction: column; align-items: center; gap: 6px; }
+        .btn-jump { background: rgba(191,90,242,0.2); color: var(--purple); }
+        .btn-halt { background: rgba(255,69,58,0.2); color: var(--red); }
+        .btn-large svg { width: 24px; height: 24px; }
+
+        /* --- iOS 风格 Widget：活跃通道 --- */
+        .section-title { font-size: 20px; font-weight: 700; margin: 10px 16px; letter-spacing: 0.3px; }
+        .rooms-scroller { display: flex; overflow-x: auto; padding: 0 16px 20px 16px; gap: 14px; scroll-snap-type: x mandatory; }
+        .rooms-scroller::after { content: ''; padding-right: 2px; } /* 占位修正 */
+        .room-widget {
+            scroll-snap-align: center; flex-shrink: 0; width: 260px;
+            background: var(--bg-elevated); border-radius: 20px; padding: 18px;
+            display: flex; flex-direction: column; gap: 10px; position: relative; overflow: hidden;
+            --pct: 0%; --bar-color: var(--cyan);
+        }
+        .room-widget::before {
+            content: ''; position: absolute; left: 0; bottom: 0; height: 4px; width: var(--pct);
+            background: var(--bar-color); transition: 1s linear;
+        }
+        .rw-pwd { font-family: var(--font-mono); font-size: 18px; font-weight: 700; color: #fff; }
+        .rw-bottom { display: flex; justify-content: space-between; font-size: 13px; color: var(--label-secondary); font-weight: 500;}
+        .rw-idle { color: var(--green); font-family: var(--font-mono); font-size: 14px; font-weight: 600;}
+        .room-widget.warn { --bar-color: var(--orange); } .room-widget.warn .rw-idle { color: var(--orange); }
+        .room-widget.danger { --bar-color: var(--red); } .room-widget.danger .rw-idle { color: var(--red); animation: blink 1s infinite; }
+
+        /* --- iOS Inset Grouped List：终端矩阵 --- */
+        .ios-list { margin: 0 16px 20px 16px; display: flex; flex-direction: column; gap: 16px; }
+        .ios-group { background: var(--bg-elevated); border-radius: 16px; overflow: hidden; }
+        
+        .ios-cell-header {
+            padding: 16px; display: flex; justify-content: space-between; align-items: center;
+            background: var(--bg-elevated); transition: 0.2s; position: relative;
+        }
+        .ios-cell-header:active { background: var(--bg-elevated-hover); }
+        .ios-cell-header::after { /* iOS 分割线 */
+            content: ''; position: absolute; bottom: 0; left: 16px; right: 0; height: 1px; background: var(--separator);
+        }
+        .ip-left { display: flex; align-items: center; gap: 12px; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--green); }
+        .status-dot.banned { background: var(--red); }
+        .ip-addr { font-size: 17px; font-family: var(--font-mono); font-weight: 600; }
+        .ip-count { background: var(--separator); color: #fff; padding: 2px 8px; border-radius: 10px; font-size: 13px; font-weight: 600;}
+        
+        .ios-cell-body { display: none; background: rgba(0,0,0,0.2); }
+        .ios-group.expanded .ios-cell-body { display: block; }
+        
+        .node-row { padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid var(--separator); }
+        .node-row:last-child { border-bottom: none; }
+        .n-top { display: flex; justify-content: space-between; align-items: center; }
+        .n-uid { font-size: 15px; color: var(--cyan); font-family: var(--font-mono); font-weight: 600; }
+        .n-room { font-size: 13px; color: var(--label-secondary); }
+        
+        /* 移动端操作小按钮 */
+        .btn-action { background: var(--separator); color: #fff; border: none; padding: 8px 14px; border-radius: 10px; font-size: 13px; font-weight: 600; }
+        .btn-action.red { background: rgba(255,69,58,0.2); color: var(--red); }
+        .btn-action.green { background: rgba(48,209,88,0.2); color: var(--green); }
+
+        /* 全局 Toast */
+        #toast {
+            position: fixed; top: 60px; left: 50%; transform: translateX(-50%) scale(0.9);
+            background: rgba(28,28,30,0.9); backdrop-filter: blur(20px); border: 1px solid var(--separator);
+            color: #fff; padding: 12px 24px; border-radius: 24px; font-size: 15px; font-weight: 600;
+            opacity: 0; pointer-events: none; transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            z-index: 10000; box-shadow: 0 10px 30px rgba(0,0,0,0.5); white-space: nowrap;
+        }
+        #toast.show { opacity: 1; transform: translateX(-50%) scale(1); }
+
+        @keyframes blink { 50% { opacity: 0.4; } }
+        .empty-text { padding: 20px; text-align: center; color: var(--label-secondary); font-size: 15px; }
+    </style>
+</head>
+<body class="locked">
+
+<div id="toast"></div>
+
+<!-- 登录界面 -->
+<div id="login-overlay">
+    <div class="login-box">
+        <div class="app-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <div class="login-title">内核认证</div>
+        <!-- 移除 inputmode="numeric" 以支持混合密码 -->
+        <input type="password" id="pass-in" class="ios-input" placeholder="输入控制密钥">
+        <button class="ios-btn-primary tap-effect" onclick="startLogin()">验证登入</button>
+    </div>
+</div>
+
+<div id="app">
+    <!-- 遥控器：控制中心 -->
+    <div class="control-center">
+        <!-- 统计与门禁状态 -->
+        <div class="cc-row">
+            <div class="cc-card stats-card">
+                <div class="stat-line"><span style="color:var(--label-secondary)">终端节点</span><span class="stat-val" id="v-ips">0</span></div>
+                <div style="height:1px; background:var(--separator)"></div>
+                <div class="stat-line"><span style="color:var(--label-secondary)">活跃会话</span><span class="stat-val" id="v-users">0</span></div>
+            </div>
+            <div class="cc-card lock-card tap-effect" id="card-lock" onclick="toggleLock()">
+                <div class="lock-icon" id="icon-lock">🔒</div>
+                <div class="lock-text" id="text-lock">系统已锁</div>
+            </div>
+        </div>
+
+        <!-- 核心主力：新建房间 -->
+        <div class="cc-main-action">
+            <div class="main-action-header">
+                <div class="main-action-title">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+                    部署临时通道
+                </div>
+                <div class="time-stepper">
+                    <input type="number" id="in-safe-time" class="time-input" value="180">
+                    <span class="time-label">s</span>
+                </div>
+            </div>
+            <button class="btn-massive tap-effect" onclick="generateTempRoom()">
+                ⚡ 一键部署通道
+            </button>
+        </div>
+
+        <!-- 战术大按钮 -->
+        <div class="cc-row">
+            <button class="btn-large btn-jump tap-effect" onclick="triggerSpaceJump()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M16 12l-4-4-4 4M12 16V8"/></svg>
+                全员跃迁
+            </button>
+            <button class="btn-large btn-halt tap-effect" id="btn-halt" onclick="confirmHalt()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                <span id="text-halt">紧急熔断</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- 活跃通道 Widget -->
+    <h2 class="section-title">活跃通道</h2>
+    <div class="rooms-scroller" id="temp-rooms-scroller">
+        <div class="empty-text" id="temp-empty-msg" style="width:100%">暂无部署的临时通道</div>
+    </div>
+
+    <!-- 终端矩阵 Inset List -->
+    <h2 class="section-title">终端矩阵</h2>
+    <div class="ios-list" id="ip-list-container">
+        <!-- JS 动态注入 -->
+    </div>
+</div>
+
+<script>
+    const $ = id => document.getElementById(id);
+    let SESSION_TOKEN = sessionStorage.getItem('neon_sess_v1');
+    let expandedIps = new Set();
+    let clientClockOffset = 0;
+    let currentLockState = true;
+    let currentHaltState = false;
+
+    function getServerNow() { return Date.now() / 1000 - clientClockOffset; }
+    function fmtMMSS(seconds) {
+        seconds = Math.max(0, Math.floor(seconds));
+        const m = Math.floor(seconds / 60); const s = seconds % 60;
+        return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    }
+    function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+    let toastTimer;
+    function showToast(msg, color = '#fff') {
+        const el = $('toast');
+        el.innerText = msg; el.style.color = color;
+        el.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => el.classList.remove('show'), 2500);
+    }
+
+    // --- 登录逻辑 ---
+    async function startLogin() {
+        const pwd = $('pass-in').value.trim();
+        if(!pwd) return;
+        try {
+            const pwdBuf = new TextEncoder().encode(pwd);
+            const hashBuf = await window.crypto.subtle.digest('SHA-256', pwdBuf);
+            const clientKey = Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
+            const res = await fetch('/api/auth/login', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ client_key: clientKey })
+            });
+            if(!res.ok) throw new Error();
+            const { token } = await res.json();
+            SESSION_TOKEN = token;
+            sessionStorage.setItem('neon_sess_v1', token);
+            document.body.classList.remove('locked');
+            $('pass-in').blur(); 
+            fetchData();
+        } catch(e) { 
+            showToast("认证失败，密钥不匹配", "var(--red)");
+            $('pass-in').value = '';
+        }
+    }
+
+    // --- Widget 渲染 ---
+    function renderTempRooms(temp_rooms) {
+        const scroller = $('temp-rooms-scroller');
+        const emptyMsg = $('temp-empty-msg');
+        
+        if (!temp_rooms || temp_rooms.length === 0) {
+            scroller.querySelectorAll('.room-widget').forEach(c => c.remove());
+            emptyMsg.style.display = 'block';
+            return;
+        }
+        emptyMsg.style.display = 'none';
+
+        const incomingPwds = new Set(temp_rooms.map(r => r.pwd));
+        scroller.querySelectorAll('.room-widget').forEach(card => {
+            if (!incomingPwds.has(card.dataset.pwd)) card.remove();
+        });
+
+        temp_rooms.forEach(room => {
+            const escSel = (window.CSS && CSS.escape) ? CSS.escape(room.pwd) : room.pwd;
+            let card = scroller.querySelector(`.room-widget[data-pwd="${escSel}"]`);
+            if (!card) {
+                card = document.createElement('div');
+                card.className = 'room-widget tap-effect';
+                card.dataset.pwd = room.pwd;
+                // 点击卡片直接复制
+                card.onclick = () => {
+                    const url = window.location.origin + '/#' + room.pwd;
+                    navigator.clipboard.writeText(url).then(() => showToast("📍 链接已复制到剪贴板"));
+                };
+                card.innerHTML = `
+                    <div class="rw-pwd">${escapeHtml(room.pwd)}</div>
+                    <div class="rw-bottom">
+                        <span>寿命: ${room.safe_time}s</span>
+                        <span class="rw-idle">00:00</span>
+                    </div>
+                `;
+                scroller.appendChild(card);
+            }
+            card.dataset.lastActive = room.last_active_ts;
+            card.dataset.safeTime = room.safe_time;
+        });
+        tickIdleTimers();
+    }
+
+    function tickIdleTimers() {
+        const now = getServerNow();
+        document.querySelectorAll('#temp-rooms-scroller .room-widget').forEach(card => {
+            const lat = parseFloat(card.dataset.lastActive);
+            const st = parseInt(card.dataset.safeTime);
+            if (!Number.isFinite(lat) || !Number.isFinite(st) || st <= 0) return;
+
+            const idle = Math.max(0, now - lat);
+            const pct = Math.min(100, (idle / st) * 100);
+            
+            card.querySelector('.rw-idle').textContent = fmtMMSS(idle);
+            card.style.setProperty('--pct', pct.toFixed(1) + '%');
+
+            card.classList.remove('warn', 'danger');
+            if (pct >= 80) card.classList.add('danger');
+            else if (pct >= 50) card.classList.add('warn');
+        });
+    }
+
+    window.toggleAccordion = (ip) => {
+        if (expandedIps.has(ip)) expandedIps.delete(ip);
+        else expandedIps.add(ip);
+        const group = document.getElementById(`ip-group-${ip}`);
+        if(group) group.classList.toggle('expanded');
+    };
+
+    // --- iOS List 渲染 ---
+    function renderMobileList(grouped) {
+        const container = $('ip-list-container');
+        const incomingIps = new Set(Object.keys(grouped));
+        
+        container.querySelectorAll('.ios-group').forEach(el => {
+            if (!incomingIps.has(el.dataset.ip)) el.remove();
+        });
+
+        if(incomingIps.size === 0) {
+            container.innerHTML = '<div class="empty-text">无连接终端</div>';
+            return;
+        } else if (container.querySelector('.empty-text')) {
+            container.innerHTML = '';
+        }
+
+        Object.keys(grouped).sort().forEach(ip => {
+            const group = grouped[ip];
+            let groupEl = document.getElementById(`ip-group-${ip}`);
+            
+            let nodesHtml = group.sessions.map(u => `
+                <div class="node-row">
+                    <div class="n-top">
+                        <span class="n-uid">@${u.uid.slice(0,8)}</span>
+                        <div style="display:flex; gap:8px;">
+                            <span style="font-size:12px; color:var(--label-secondary); margin-top:2px">${u.online_time}s</span>
+                            <button class="btn-action ${u.is_banned ? 'green' : 'red'} tap-effect" onclick="doBan('${u.uid}', 'uid', ${u.is_banned})">
+                                ${u.is_banned ? '解ID' : '踢出'}
+                            </button>
+                        </div>
+                    </div>
+                    <div class="n-room">🚪 ${escapeHtml(u.room)}</div>
+                </div>
+            `).join('');
+
+            if (!groupEl) {
+                groupEl = document.createElement('div');
+                groupEl.className = `ios-group ${expandedIps.has(ip) ? 'expanded' : ''}`;
+                groupEl.id = `ip-group-${ip}`;
+                groupEl.dataset.ip = ip;
+                container.appendChild(groupEl);
+            }
+            
+            groupEl.innerHTML = `
+                <div class="ios-cell-header" onclick="toggleAccordion('${ip}')">
+                    <div class="ip-left">
+                        <div class="status-dot ${group.isIpBanned ? 'banned' : ''}"></div>
+                        <div class="ip-addr">${ip}</div>
+                        <div class="ip-count">${group.sessions.length}</div>
+                    </div>
+                    <div>
+                        <button class="btn-action ${group.isIpBanned ? 'green' : 'red'} tap-effect" onclick="event.stopPropagation(); doBan('${ip}', 'ip', ${group.isIpBanned})">
+                            ${group.isIpBanned ? '解 IP' : '封 IP'}
+                        </button>
+                    </div>
+                </div>
+                <div class="ios-cell-body">${nodesHtml}</div>
+            `;
+        });
+    }
+
+    // --- 数据轮询 ---
+    async function fetchData() {
+        if (!SESSION_TOKEN) return;
+        try {
+            const res = await fetch(`/api/stats`, { headers: { 'x-session-token': SESSION_TOKEN } });
+            if(res.status === 401) { document.body.classList.add('locked'); return; }
+            const data = await res.json();
+
+            if (typeof data.server_ts === 'number') {
+                clientClockOffset = (Date.now() / 1000) - data.server_ts;
+            }
+            
+            // 更新 UI 状态
+            const cardLock = $('card-lock');
+            currentLockState = data.is_locked;
+            if(data.is_locked) {
+                cardLock.className = 'cc-card lock-card tap-effect';
+                $('icon-lock').innerText = '🔒'; $('text-lock').innerText = '大门已锁';
+            } else {
+                cardLock.className = 'cc-card lock-card unlocked tap-effect';
+                $('icon-lock').innerText = '🔓'; $('text-lock').innerText = '大门开放';
+            }
+
+            currentHaltState = data.is_halted;
+            const btnHalt = $('btn-halt');
+            if(data.is_halted) {
+                btnHalt.style.background = 'rgba(48,209,88,0.2)'; btnHalt.style.color = 'var(--green)';
+                $('text-halt').innerText = '恢复运行';
+            } else {
+                btnHalt.style.background = 'rgba(255,69,58,0.2)'; btnHalt.style.color = 'var(--red)';
+                $('text-halt').innerText = '紧急熔断';
+            }
+
+            const grouped = {};
+            data.users.forEach(u => {
+                if(!grouped[u.ip]) grouped[u.ip] = { sessions: [], isIpBanned: false };
+                grouped[u.ip].sessions.push(u); 
+            });
+            if (data.banned_ips_list) {
+                data.banned_ips_list.forEach(ip => {
+                    if(!grouped[ip]) grouped[ip] = { sessions: [], isIpBanned: true };
+                    else grouped[ip].isIpBanned = true;
+                });
+            }
+
+            $('v-users').innerText = data.online_count;
+            $('v-ips').innerText = Object.keys(grouped).length;
+
+            renderTempRooms(data.temp_rooms);
+            renderMobileList(grouped);
+
+        } catch(e) { console.error(e); }
+    }
+
+    // --- 战术指令 ---
+    window.doBan = async (target, type, isCurrentlyBanned) => {
+        const action = isCurrentlyBanned ? 'unban' : 'ban';
+        await fetch(`/api/ban`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'x-session-token': SESSION_TOKEN },
+            body: JSON.stringify({ target, action, type })
+        });
+        showToast(isCurrentlyBanned ? "✅ 防线解除" : "🚫 目标已隔离");
+        fetchData();
+    };
+
+    window.toggleLock = async () => {
+        if (!SESSION_TOKEN) return;
+        try {
+            const res = await fetch(`/api/admin/lock_mode`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'x-session-token': SESSION_TOKEN },
+                body: JSON.stringify({ lock: !currentLockState })
+            });
+            const data = await res.json();
+            if (data.status === 'ok') {
+                showToast(!currentLockState ? "🔒 防火墙大门已锁定" : "🔓 防火墙大门已开启");
+                fetchData();
+            }
+        } catch(e) { showToast("通信失败", "var(--red)"); }
+    };
+
+    window.generateTempRoom = async () => {
+        if (!SESSION_TOKEN) return;
+        const safeTimeVal = parseInt($('in-safe-time').value) || 180;
+        try {
+            const res = await fetch(`/api/admin/generate_room`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'x-session-token': SESSION_TOKEN },
+                body: JSON.stringify({ safe_time: safeTimeVal })
+            });
+            const data = await res.json();
+            if (data.status === 'ok') {
+                const roomUrl = window.location.origin + "/#" + data.room_pwd;
+                await navigator.clipboard.writeText(roomUrl);
+                showToast(`✅ 部署成功 (${safeTimeVal}s)，链接已复制`);
+                fetchData();
+            }
+        } catch(e) { showToast("通道生成失败", "var(--red)"); }
+    };
+
+    window.triggerSpaceJump = async () => {
+        if (!SESSION_TOKEN) return;
+        if(!confirm("⚠️ 警告：全员跃迁\n确定将所有在线用户强行转移至新维度吗？")) return;
+        const safeTimeVal = parseInt($('in-safe-time').value) || 180;
+        try {
+            const res = await fetch(`/api/admin/space_jump`, { 
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'x-session-token': SESSION_TOKEN },
+                body: JSON.stringify({ safe_time: safeTimeVal }) 
+            });
+            const data = await res.json();
+            if (data.status === 'ok') {
+                showToast(`🌀 跃迁执行完毕 (${data.targets_moved} 终端)`, "var(--purple)");
+                fetchData();
+            }
+        } catch(e) { showToast("跃迁引擎无响应", "var(--red)"); }
+    };
+
+    window.confirmHalt = async () => {
+        if (!SESSION_TOKEN) return;
+        const msg = currentHaltState 
+            ? "确定解除熔断，恢复外部接入通道吗？" 
+            : "🚨 极度危险：紧急熔断\n此操作将瞬间清退全站用户并斩断所有底层连接！确定执行？";
+        if(!confirm(msg)) return;
+        
+        try {
+            const res = await fetch(`/api/admin/shutdown`, { method: 'POST', headers: { 'x-session-token': SESSION_TOKEN } });
+            const data = await res.json();
+            if (data.status === 'ok') {
+                showToast(data.action === 'halted' ? "🚨 物理防线已切断" : "✅ 核心服务已恢复", data.action === 'halted' ? "var(--red)" : "var(--green)");
+                fetchData();
+            }
+        } catch(e) { showToast("最高指令下达失败", "var(--red)"); }
+    };
+
+    if (SESSION_TOKEN) {
+        document.body.classList.remove('locked');
+        fetchData(); 
+    }
+    setInterval(fetchData, 2000);
+    setInterval(tickIdleTimers, 1000);
+</script>
+</body>
+</html>
