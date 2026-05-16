@@ -3,32 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>创建房间 - E2EE Node</title>
+    <title>私人通道控制终端</title>
     <style>
-        /* iOS 原生设计系统变量 */
+        /* * 设计系统：黄金比例 & 斐波那契数列
+         * 尺度因子：5, 8, 13, 21, 34, 55, 89, 144, 233, 377
+         */
         :root {
-            --ios-bg: #F2F2F7;
-            --ios-card: #FFFFFF;
-            --ios-blue: #0A84FF;
-            --ios-blue-active: #007AFF;
-            --ios-green: #34C759;
-            --ios-red: #FF3B30;
-            --ios-orange: #FF9500;
-            --text-primary: #000000;
-            --text-secondary: #8E8E93;
-            --border-color: rgba(60, 60, 67, 0.1);
-            --ring-track: rgba(0, 0, 0, 0.05);
-        }
-
-        /* 自动暗黑模式适配 */
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --ios-bg: #000000;
-                --ios-card: #1C1C1E;
-                --text-primary: #FFFFFF;
-                --border-color: rgba(255, 255, 255, 0.1);
-                --ring-track: rgba(255, 255, 255, 0.1);
-            }
+            --bg-color: #000000;
+            --glass-bg: rgba(30, 30, 35, 0.65);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --text-main: #FFFFFF;
+            --text-sub: rgba(255, 255, 255, 0.55);
+            --accent-green: #32D74B;
+            --accent-blue: #0A84FF;
+            --accent-red: #FF453A;
+            --ring-track: rgba(255, 255, 255, 0.05);
+            --btn-bg: rgba(255, 255, 255, 0.12);
         }
 
         * {
@@ -38,117 +28,164 @@
             -webkit-tap-highlight-color: transparent;
         }
 
-        /* 核心修改：彻底锁死滚动，锁定视口高度 */
         html, body {
             width: 100vw;
             height: 100vh;
-            height: 100dvh; /* 兼容 Safari 动态工具栏 */
-            overflow: hidden; /* 彻底禁用滚动条 */
-            overscroll-behavior: none; /* 禁用 iOS 橡皮筋回弹效果 */
-            touch-action: manipulation; /* 禁止双击放大 */
-            -webkit-user-select: none; /* 禁用全局长按选中，赋予原生 App 质感 */
+            height: 100dvh;
+            overflow: hidden; 
+            overscroll-behavior: none; 
+            touch-action: manipulation; 
+            -webkit-user-select: none; 
             user-select: none;
         }
 
         body {
-            background-color: var(--ios-bg);
-            color: var(--text-primary);
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            background-image: radial-gradient(circle at 50% 0%, rgba(10, 132, 255, 0.15), #000000 60%);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
             display: flex;
             flex-direction: column;
-            justify-content: center; /* 绝对垂直居中，自适应所有屏幕 */
+            justify-content: center;
             align-items: center;
-            padding: 16px;
-            transition: background-color 0.3s ease;
+            padding: 13px; /* 斐波那契数 */
         }
 
-        /* 内容主容器 */
         .main-container {
             width: 100%;
-            max-width: 400px;
+            max-width: 377px; /* 斐波那契数，完美贴合移动端视口 */
             display: flex;
             flex-direction: column;
             align-items: center;
-            transform: translateY(-5%); /* 视觉重心微微上移 */
+            transform: translateY(-2%); 
         }
 
-        .header {
-            width: 100%;
+        /* 身份尊称区 */
+        .greeting-area {
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 21px; /* 斐波那契数 */
+        }
+        
+        .greeting-prefix {
+            font-size: 13px; /* 斐波那契数 */
+            color: var(--text-sub);
+            letter-spacing: 1px;
+            font-weight: 400;
         }
 
-        .header h1 {
-            font-size: 28px;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-            color: var(--text-primary);
+        .greeting-name {
+            font-size: 34px; /* 斐波那契数 */
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            background: linear-gradient(180deg, #FFFFFF 0%, #AAAAAA 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-top: 5px; /* 斐波那契数 */
         }
 
-        /* 卡片整体微调，减小内边距防止超屏 */
-        .card {
+        /* 毛玻璃卡片基类 */
+        .glass-card {
             width: 100%;
-            background: var(--ios-card);
-            border-radius: 20px;
-            padding: 20px;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
-            margin-bottom: 16px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(21px);
+            -webkit-backdrop-filter: blur(21px);
+            border: 1px solid var(--glass-border);
+            border-radius: 21px; /* 斐波那契数 */
+            padding: 21px; /* 斐波那契数 */
+            box-shadow: 0 13px 34px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+            margin-bottom: 13px; /* 斐波那契数 */
         }
 
-        .input-group {
-            margin-bottom: 20px;
+        /* 财务大盘 */
+        .finance-panel {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
+
+        .finance-item {
+            flex: 1;
+            text-align: center;
+        }
+
+        .finance-divider {
+            width: 1px;
+            height: 34px; /* 斐波那契数 */
+            background: var(--glass-border);
+        }
+
+        .finance-value {
+            font-size: 34px; /* 斐波那契数 */
+            font-weight: 300;
+            font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+            margin-bottom: 5px; /* 斐波那契数 */
+            text-shadow: 0 0 13px rgba(255, 255, 255, 0.1);
+            transition: color 0.4s ease, transform 0.2s ease;
+        }
+
+        .finance-label {
+            font-size: 13px; /* 斐波那契数 */
+            font-weight: 500;
+            color: var(--text-sub);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .cost-highlight { color: var(--accent-blue); }
+
+        /* 输入区 */
+        .input-group { margin-bottom: 21px; }
 
         .input-group label {
             display: block;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 500;
-            color: var(--text-secondary);
-            margin-bottom: 8px;
-            text-transform: uppercase;
+            color: var(--text-sub);
+            margin-bottom: 8px; /* 斐波那契数 */
+            text-align: center;
             letter-spacing: 0.5px;
         }
 
         .input-wrapper {
-            position: relative;
-            background: var(--ios-bg);
-            border-radius: 12px;
-            padding: 2px;
-            border: 1px solid var(--border-color);
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 13px; /* 斐波那契数 */
+            border: 1px solid var(--glass-border);
+            padding: 5px; /* 斐波那契数 */
         }
 
         .input-wrapper input {
             width: 100%;
             background: transparent;
             border: none;
-            color: var(--text-primary);
-            font-size: 24px;
+            color: var(--text-main);
+            font-size: 21px; /* 斐波那契数 */
             font-weight: 600;
-            padding: 10px;
+            padding: 8px; /* 斐波那契数 */
             text-align: center;
             outline: none;
         }
 
+        /* 极致主按钮 */
         .btn-primary {
             width: 100%;
-            background: var(--ios-blue);
+            background: var(--btn-bg);
             color: #FFFFFF;
-            border: none;
-            padding: 14px;
-            font-size: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 13px 21px; /* 黄金比例内外距 */
+            font-size: 16px; /* 视觉平衡点：13 * 1.272 ≈ 16 */
             font-weight: 600;
-            border-radius: 14px;
+            border-radius: 13px; /* 斐波那契数 */
             cursor: pointer;
-            transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+            transition: all 0.2s cubic-bezier(0.25, 1, 0.5, 1);
         }
 
         .btn-primary:active {
-            transform: scale(0.96);
-            background: var(--ios-blue-active);
+            transform: scale(0.95);
+            background: rgba(255, 255, 255, 0.2);
         }
 
         .btn-primary:disabled {
-            opacity: 0.5;
+            opacity: 0.4;
             cursor: not-allowed;
             transform: none;
         }
@@ -157,65 +194,79 @@
         .result-panel {
             display: none;
             text-align: center;
-            animation: slideUpFade 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            animation: slideUpFade 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
         @keyframes slideUpFade {
-            from { opacity: 0; transform: translateY(20px) scale(0.95); }
+            from { opacity: 0; transform: translateY(21px) scale(0.95); }
             to { opacity: 1; transform: translateY(0) scale(1); }
         }
 
         .result-subtitle {
-            font-size: 14px;
+            font-size: 13px; /* 斐波那契数 */
+            font-weight: 500;
+            color: var(--accent-green);
+            margin-bottom: 13px; /* 斐波那契数 */
+            letter-spacing: 0.5px;
+        }
+
+        /* 专属复制按钮 */
+        .btn-copy {
+            background: rgba(10, 132, 255, 0.15);
+            color: var(--accent-blue);
+            border: 1px solid rgba(10, 132, 255, 0.3);
+            padding: 13px 21px; /* 斐波那契矩阵 */
+            font-size: 16px;
             font-weight: 600;
-            color: var(--ios-green);
-            margin-bottom: 8px;
+            border-radius: 13px; /* 斐波那契数 */
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.25, 1, 0.5, 1);
+            margin-bottom: 21px; /* 斐波那契数 */
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px; /* 斐波那契数 */
         }
 
-        .room-pwd {
-            font-size: 26px;
-            font-weight: 700;
-            font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-            letter-spacing: 1px;
-            color: var(--text-primary);
-            margin-bottom: 20px;
-            /* 唯一允许长按选中的地方，防止用户意外丢失剪贴板 */
-            user-select: all; 
-            -webkit-user-select: all;
+        .btn-copy svg {
+            width: 16px;
+            height: 16px;
         }
 
-        /* --- 经过缩放调整的 Apple Watch 风格圆形计时器 --- */
+        .btn-copy:active {
+            transform: scale(0.95);
+            background: rgba(10, 132, 255, 0.25);
+        }
+
+        /* 环形倒计时优化：尺度严格控制为 144px */
         .circular-timer {
             position: relative;
-            width: 130px; /* 从 180px 缩小至 130px */
-            height: 130px;
-            margin: 0 auto 10px auto;
+            width: 144px; /* 斐波那契数 */
+            height: 144px; /* 斐波那契数 */
+            margin: 0 auto 8px auto; /* 斐波那契数 */
         }
 
         .circular-timer svg {
             width: 100%;
             height: 100%;
             transform: rotate(-90deg);
+            filter: drop-shadow(0 0 8px rgba(10, 132, 255, 0.3));
         }
 
-        /* 圆环半径从 82 缩小至 58，周长 = 2 * PI * 58 = 364.42 */
+        /* 半径计算：(144 / 2) - (5 / 2) - 安全余量 ≈ 66 */
         .timer-track, .timer-progress {
-            cx: 65px;
-            cy: 65px;
-            r: 58px;
-            fill: transparent;
-            stroke-width: 8px;
+            cx: 72px; cy: 72px; r: 66px; 
+            fill: transparent; stroke-width: 5px; /* 斐波那契数 */
         }
 
-        .timer-track {
-            stroke: var(--ring-track);
-        }
+        .timer-track { stroke: var(--ring-track); }
 
         .timer-progress {
-            stroke: var(--ios-blue);
+            stroke: var(--accent-blue);
             stroke-linecap: round;
-            transition: stroke-dashoffset 1s linear, stroke 0.5s ease;
-            stroke-dasharray: 364.42; 
+            transition: stroke-dashoffset 0.8s cubic-bezier(0.34, 1.56, 0.64, 1), stroke 0.5s ease;
+            /* 2 * π * 66 ≈ 414.69 */
+            stroke-dasharray: 414.69; 
             stroke-dashoffset: 0;
         }
 
@@ -229,78 +280,93 @@
         }
 
         .time-value {
-            font-size: 34px; /* 字体缩小 */
-            font-weight: 300;
-            color: var(--text-primary);
+            font-size: 34px; /* 斐波那契数 */
+            font-weight: 200;
+            color: var(--text-main);
             font-variant-numeric: tabular-nums;
+            line-height: 1;
         }
 
         .time-label {
-            font-size: 11px;
+            font-size: 13px; /* 斐波那契数 */
             font-weight: 500;
-            color: var(--text-secondary);
-            margin-top: 2px;
+            color: var(--text-sub);
+            margin-top: 5px; /* 斐波那契数 */
         }
 
-        /* Toast 提示 */
+        /* 灵动岛弹窗 */
         .toast {
             position: fixed;
-            top: -60px;
+            top: -100px;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(28, 28, 30, 0.85);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
+            background: rgba(40, 40, 40, 0.9);
+            backdrop-filter: blur(21px);
+            -webkit-backdrop-filter: blur(21px);
             color: #fff;
-            padding: 12px 20px;
-            border-radius: 30px;
-            font-size: 14px;
+            padding: 13px 21px; /* 斐波那契数 */
+            border-radius: 55px; /* 斐波那契数 */
+            font-size: 13px; /* 斐波那契数 */
             font-weight: 500;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            transition: top 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 0 13px 34px rgba(0,0,0,0.6);
+            transition: top 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             z-index: 1000;
             display: flex;
             align-items: center;
-            gap: 8px;
-            white-space: nowrap;
+            gap: 8px; /* 斐波那契数 */
         }
 
-        .toast.show {
-            top: max(env(safe-area-inset-top, 50px), 50px);
-        }
-
-        .toast-icon {
-            color: var(--ios-green);
-            font-size: 16px;
-        }
+        .toast.show { top: max(env(safe-area-inset-top, 55px), 55px); }
+        .toast-icon { font-size: 16px; }
     </style>
 </head>
 <body>
 
     <div class="toast" id="toast">
-        <span class="toast-icon">✓</span>
-        <span id="toastMsg">已复制房间直连地址</span>
+        <span class="toast-icon" id="toastIcon">✓</span>
+        <span id="toastMsg">操作成功</span>
     </div>
 
     <div class="main-container">
         
-        <div class="header">
-            <h1>创建房间</h1>
+        <div class="greeting-area">
+            <div class="greeting-prefix">系统管理员</div>
+            <div class="greeting-name">{{UID}}</div>
         </div>
 
-        <div class="card control-panel">
+        <div class="glass-card finance-panel" id="financePanel">
+            <div class="finance-item">
+                <div class="finance-value" id="balanceDisplay">{{BALANCE}}</div>
+                <div class="finance-label">可用配额</div>
+            </div>
+            <div class="finance-divider"></div>
+            <div class="finance-item">
+                <div class="finance-value cost-highlight" id="costDisplay">-{{COST}}</div>
+                <div class="finance-label">单次消耗</div>
+            </div>
+        </div>
+
+        <div class="glass-card control-panel">
             <div class="input-group">
-                <label>设定房间存活时间 (秒)</label>
+                <label>聊天室存活时间 (秒)</label>
                 <div class="input-wrapper">
                     <input type="number" id="safeTimeInput" value="180" inputmode="numeric">
                 </div>
             </div>
-            <button class="btn-primary" id="generateBtn" onclick="generateRoom()">创建房间</button>
+            <button class="btn-primary" id="generateBtn" onclick="generateRoom()">创建聊天室</button>
         </div>
 
-        <div class="card result-panel" id="resultPanel">
-            <div class="result-subtitle">临时房间已建立</div>
-            <div class="room-pwd" id="pwdDisplay">----------</div>
+        <div class="glass-card result-panel" id="resultPanel">
+            <div class="result-subtitle">聊天室已成功建立</div>
+            
+            <button class="btn-copy" id="copyUrlBtn" onclick="copyRoomUrl()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+                点击此处复制
+            </button>
 
             <div class="circular-timer">
                 <svg>
@@ -309,7 +375,7 @@
                 </svg>
                 <div class="timer-text-container">
                     <div class="time-value" id="countdownText">180</div>
-                    <div class="time-label">距离房间销毁</div>
+                    <div class="time-label">销毁倒计时</div>
                 </div>
             </div>
         </div>
@@ -317,123 +383,172 @@
     </div>
 
     <script>
-        let countdownInterval = null;
-        // 圆环精确周长，匹配 CSS 中的修改
-        const CIRCUMFERENCE = 364.42; 
+        // 渲染后端注入数据
+        let currentBalance = parseInt("{{BALANCE}}") || 0;
+        const cost = parseInt("{{COST}}") || 0;
+        const accessPath = "{{ACCESS_PATH}}" || "";
 
-        // 显示 iOS Toast
-        function showToast(message) {
+        let heartbeatInterval = null;
+        let activeRoomUrl = ""; 
+        
+        // 严格遵循数学方程：C = 2 * π * 66
+        const CIRCUMFERENCE = 414.69; 
+
+        function showToast(message, isError = false) {
             const toast = document.getElementById('toast');
             const toastMsg = document.getElementById('toastMsg');
+            const icon = document.getElementById('toastIcon');
+            
             toastMsg.innerText = message;
+            icon.innerText = isError ? "⚠️" : "✓";
+            icon.style.color = isError ? "var(--accent-red)" : "var(--accent-green)";
+            
             toast.classList.add('show');
             setTimeout(() => {
                 toast.classList.remove('show');
             }, 3000);
         }
 
-        // 核心：创建房间逻辑
+        async function copyRoomUrl() {
+            if (!activeRoomUrl) return;
+            
+            try {
+                await navigator.clipboard.writeText(activeRoomUrl);
+                showToast("🔗 直连地址已复制到剪贴板");
+            } catch (err) {
+                showToast("系统复制权限受限，请重试", true);
+            }
+        }
+
         async function generateRoom() {
             const safeTime = parseInt(document.getElementById('safeTimeInput').value) || 180;
             const btn = document.getElementById('generateBtn');
             const resultPanel = document.getElementById('resultPanel');
-            const pwdDisplay = document.getElementById('pwdDisplay');
             
-            // 按钮防抖与加载状态
+            if (currentBalance < cost) {
+                showToast("配额不足，请联系系统管理员", true);
+                return;
+            }
+
             btn.disabled = true;
-            btn.innerText = "正在创建...";
-            resultPanel.style.opacity = '1'; 
+            btn.innerText = "正在配置安全参数...";
+            resultPanel.style.opacity = '1';
+            resultPanel.style.transform = 'translateY(0) scale(1)';
 
             try {
-                // 发起创建请求
                 const response = await fetch('/api/admin/generate_room', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ safe_time: safeTime })
+                    body: JSON.stringify({ 
+                        safe_time: safeTime,
+                        access_path: accessPath 
+                    })
                 });
-
-                if (!response.ok) {
-                    throw new Error("HTTP " + response.status);
-                }
 
                 const data = await response.json();
                 
-                if (data.status === 'ok') {
-                    // 1. 渲染结果 UI
-                    resultPanel.style.display = 'block';
-                    pwdDisplay.innerText = data.room_pwd;
-                    
-                    // 2. 纯净 URL 复制 (去除了附加的中文字符)
-                    const fullUrl = `${window.location.origin}/#${data.room_pwd}`;
-                    
-                    try {
-                        await navigator.clipboard.writeText(fullUrl);
-                        setTimeout(() => showToast("已自动复制完整连接"), 300);
-                    } catch (err) {
-                        console.error("剪贴板写入失败", err);
-                        showToast("已创建，请手动复制房间号");
+                if (response.ok && data.status === 'ok') {
+                    // 扣费动画
+                    const balanceEl = document.getElementById('balanceDisplay');
+                    if (data.balance !== undefined) {
+                        currentBalance = data.balance;
+                        balanceEl.innerText = currentBalance;
+                        balanceEl.style.color = 'var(--accent-green)';
+                        balanceEl.style.transform = 'scale(1.1)';
+                        setTimeout(() => {
+                            balanceEl.style.color = 'var(--text-main)';
+                            balanceEl.style.transform = 'scale(1)';
+                        }, 500);
                     }
 
-                    // 3. 启动圆形视觉倒计时
-                    startCircularCountdown(safeTime);
-                }
+                    // 写入内存，不再暴露到 HTML 文本中
+                    activeRoomUrl = `${window.location.origin}/#${data.room_pwd}`;
+                    resultPanel.style.display = 'block';
+                    
+                    showToast("通道建立成功，点击上方按钮复制直连地址");
 
+                    // 🚀 启动服务器心跳同步引擎
+                    startServerHeartbeat(safeTime, data.room_pwd);
+                } else {
+                    showToast(data.msg || "鉴权失败或网络拦截", true);
+                }
             } catch (error) {
                 console.error(error);
-                alert("创建失败，请确保后端放行了免密请求。");
+                showToast("连接服务器超时，请稍后重试", true);
             } finally {
-                // 恢复按钮初始状态
                 btn.disabled = false;
-                btn.innerText = "创建房间";
+                btn.innerText = "创建安全通道";
             }
         }
 
-        // 核心：圆形计时器引擎
-        function startCircularCountdown(totalSeconds) {
-            let timeLeft = totalSeconds;
+        function startServerHeartbeat(totalSeconds, roomPwd) {
             const textElem = document.getElementById('countdownText');
             const progressRing = document.getElementById('progressRing');
             const resultPanel = document.getElementById('resultPanel');
 
-            // UI 初始化复位
-            textElem.innerText = timeLeft;
+            // 初始化 UI
+            textElem.innerText = totalSeconds;
             progressRing.style.strokeDashoffset = '0';
-            progressRing.style.stroke = 'var(--ios-blue)';
-            resultPanel.style.opacity = '1';
+            progressRing.style.stroke = 'var(--accent-blue)';
+            resultPanel.style.display = 'block';
 
-            // 清理遗留进程
-            if (countdownInterval) clearInterval(countdownInterval);
+            if (heartbeatInterval) clearInterval(heartbeatInterval);
 
-            countdownInterval = setInterval(() => {
-                timeLeft--;
-                
-                if (timeLeft <= 0) {
-                    // 时间耗尽：塌缩动画
-                    clearInterval(countdownInterval);
-                    textElem.innerText = "0";
-                    progressRing.style.strokeDashoffset = CIRCUMFERENCE; 
-                    progressRing.style.stroke = 'var(--border-color)';
-                    
-                    setTimeout(() => {
-                        resultPanel.style.opacity = '0.4';
-                        resultPanel.style.transition = 'opacity 1s ease';
-                    }, 500);
-                } else {
-                    // 正常更新数值与圆环倒退
-                    textElem.innerText = timeLeft;
-                    
-                    const percentage = timeLeft / totalSeconds;
-                    const offset = CIRCUMFERENCE - (percentage * CIRCUMFERENCE);
-                    progressRing.style.strokeDashoffset = offset;
+            // 每 1 秒向服务器发起心跳探针
+            heartbeatInterval = setInterval(async () => {
+                try {
+                    const res = await fetch(`/api/room/time_left?room_pwd=${roomPwd}`);
+                    const statusData = await res.json();
 
-                    // 时间濒危时的色彩过渡
-                    if (percentage <= 0.2) {
-                        progressRing.style.stroke = 'var(--ios-red)'; 
-                    } else if (percentage <= 0.5) {
-                        progressRing.style.stroke = 'var(--ios-orange)';
+                    // 1. 服务端反馈通道已销毁或超时
+                    if (statusData.status === 'closed' || statusData.remaining_time <= 0) {
+                        clearInterval(heartbeatInterval);
+                        textElem.innerText = "0";
+                        progressRing.style.strokeDashoffset = CIRCUMFERENCE; 
+                        progressRing.style.stroke = 'var(--glass-border)';
+                        
+                        // 清理内存中的敏感数据
+                        activeRoomUrl = "";
+
+                        // 优雅的消失动画
+                        setTimeout(() => {
+                            resultPanel.style.transition = 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1)';
+                            resultPanel.style.opacity = '0';
+                            resultPanel.style.transform = 'translateY(13px) scale(0.95)';
+                            
+                            setTimeout(() => {
+                                resultPanel.style.display = 'none';
+                                resultPanel.style.opacity = '1';
+                                resultPanel.style.transform = 'translateY(0) scale(1)';
+                                showToast("安全通道已关闭并清理完毕");
+                            }, 600);
+                        }, 1000);
+                    } 
+                    // 2. 正常同步时间 (包括聊天后的时间重置回满)
+                    else {
+                        let timeLeft = statusData.remaining_time;
+                        textElem.innerText = timeLeft;
+                        
+                        const percentage = timeLeft / totalSeconds;
+                        const validPercentage = Math.min(percentage, 1);
+                        const offset = CIRCUMFERENCE - (validPercentage * CIRCUMFERENCE);
+                        
+                        // 倒计时物理平滑退回
+                        progressRing.style.strokeDashoffset = offset;
+
+                        // 状态颜色预警机制
+                        if (validPercentage > 0.5) {
+                            progressRing.style.stroke = 'var(--accent-blue)'; // 安全运行
+                        } else if (validPercentage <= 0.2) {
+                            progressRing.style.stroke = 'var(--accent-red)'; // 紧急状态
+                        } else {
+                            progressRing.style.stroke = '#FF9F0A'; // 预警状态
+                        }
                     }
+                } catch (error) {
+                    console.warn("探针网络闪断，等待重连恢复...");
                 }
-            }, 1000);
+            }, 1000); // 1秒一次精准脉冲
         }
     </script>
 </body>

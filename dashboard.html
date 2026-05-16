@@ -376,7 +376,7 @@
     <div class="login-card">
         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--text-main)" stroke-width="1.5" style="opacity:0.8"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
         <h2 class="login-title">内核认证</h2>
-        <input type="password" id="pass-in" class="login-input" placeholder="请输入密钥">
+        <input type="password" id="pass-in" class="login-input" placeholder="请输入密钥" onkeydown="if(event.key==='Enter') startLogin()">
         <button class="btn-mac login-btn" onclick="startLogin()">解锁</button>
     </div>
 </div>
@@ -401,17 +401,14 @@
             <button class="btn-mac" id="btn-lock" onclick="setLockMode(true)" title="锁定:仅允许已登记的临时通道接入">🔒 上锁</button>
             <button class="btn-mac" id="btn-unlock" onclick="setLockMode(false)" title="解锁:允许未知房间接入">🔓 解锁</button>
             
-            <!-- 存活时间输入框 -->
             <div class="time-input-wrap" title="临时通道闲置销毁时间(秒)">
                 <input type="number" id="in-safe-time" value="180" min="10" max="86400">
                 <span>秒</span>
             </div>
             <button class="btn-mac" style="color:var(--cyan)" onclick="generateTempRoom(this)" title="生成限时随机通道">⚡ 新建房间</button>
             
-            <!-- 全体转移按钮 -->
             <button class="btn-mac" style="color:var(--purple); margin-left: 6px;" onclick="triggerSpaceJump()" title="全员强制转移至随机新房间">🌀 全体转移</button>
             
-            <!-- 紧急暂停按钮 -->
             <button class="btn-mac btn-danger" id="btn-halt" style="margin-left: 6px;" onclick="shutdownServer()" title="紧急暂停:清退全员并封锁外部接入">紧急暂停</button>
         </div>
     </header>
@@ -424,8 +421,7 @@
                 活跃临时通道
             </div>
             <div class="temp-room-list" id="temp-room-list">
-                <!-- 动态填充 -->
-            </div>
+                </div>
         </div>
 
         <div class="table-wrap">
@@ -553,23 +549,31 @@
         }
     }
 
-    const ctx = $('pulseChart').getContext('2d');
-    const chart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: Array(30).fill(''),
-            datasets: [{
-                borderColor: 'rgba(50,212,255,0.8)', borderWidth: 1.2, pointRadius: 0, tension: 0.4,
-                data: Array(30).fill(0), fill: true, backgroundColor: 'rgba(50,212,255, 0.1)'
-            }]
-        },
-        options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: { x: { display: false }, y: { display: false, min: 0 } },
-            animation: { duration: 0 } 
+    // [已修复] Chart.js 软依赖，如果 chart.js 加载失败不会导致后续 js 中断
+    let chart = null;
+    try {
+        if (typeof Chart !== 'undefined') {
+            const ctx = $('pulseChart').getContext('2d');
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: Array(30).fill(''),
+                    datasets: [{
+                        borderColor: 'rgba(50,212,255,0.8)', borderWidth: 1.2, pointRadius: 0, tension: 0.4,
+                        data: Array(30).fill(0), fill: true, backgroundColor: 'rgba(50,212,255, 0.1)'
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { x: { display: false }, y: { display: false, min: 0 } },
+                    animation: { duration: 0 } 
+                }
+            });
         }
-    });
+    } catch (e) {
+        console.warn("[Dashboard] 脉冲组件未加载，核心功能继续运行。");
+    }
 
     let lastTotalMsg = null, lastTime = Date.now();
 
@@ -699,7 +703,15 @@
         if (!SESSION_TOKEN) return;
         try {
             const res = await fetch(`/api/stats`, { headers: { 'x-session-token': SESSION_TOKEN } });
-            if(res.status === 401) { document.body.classList.add('locked'); return; }
+            
+            // [已修复] 401过期时彻底清除 Token，防止死循环
+            if(res.status === 401) { 
+                sessionStorage.removeItem('neon_sess_v1');
+                SESSION_TOKEN = null;
+                document.body.classList.add('locked'); 
+                return; 
+            }
+            
             const data = await res.json();
 
             // 时钟校准:用服务器时间纠正客户端时钟漂移
@@ -720,31 +732,38 @@
             lastTotalMsg = data.total_msgs; 
             lastTime = now;
 
-            chart.data.datasets[0].data.push(tps);
-            chart.data.datasets[0].data.shift();
-            // 超过阈值变红报警
-            if(tps > 5) { 
-                chart.data.datasets[0].borderColor = '#ff453a'; 
-                chart.data.datasets[0].backgroundColor = 'rgba(255,69,58,0.1)'; 
-            } else { 
-                chart.data.datasets[0].borderColor = 'rgba(50,212,255,0.8)'; 
-                chart.data.datasets[0].backgroundColor = 'rgba(50,212,255,0.1)'; 
+            // [已修复] 检查 chart 是否存活再注入数据
+            if (chart && chart.data) {
+                chart.data.datasets[0].data.push(tps);
+                chart.data.datasets[0].data.shift();
+                // 超过阈值变红报警
+                if(tps > 5) { 
+                    chart.data.datasets[0].borderColor = '#ff453a'; 
+                    chart.data.datasets[0].backgroundColor = 'rgba(255,69,58,0.1)'; 
+                } else { 
+                    chart.data.datasets[0].borderColor = 'rgba(50,212,255,0.8)'; 
+                    chart.data.datasets[0].backgroundColor = 'rgba(50,212,255,0.1)'; 
+                }
+                chart.update('none');
             }
-            chart.update('none');
 
             const grouped = {};
-            data.users.forEach(u => {
-                if(!grouped[u.ip]) grouped[u.ip] = { sessions: [], isIpBanned: false };
-                grouped[u.ip].sessions.push(u); 
-            });
-            if (data.banned_ips_list) {
+            // [已修复] 加入 Array 检测，避免脏数据引发 TypeError
+            if (data.users && Array.isArray(data.users)) {
+                data.users.forEach(u => {
+                    if(!grouped[u.ip]) grouped[u.ip] = { sessions: [], isIpBanned: false };
+                    grouped[u.ip].sessions.push(u); 
+                });
+            }
+            
+            if (data.banned_ips_list && Array.isArray(data.banned_ips_list)) {
                 data.banned_ips_list.forEach(ip => {
                     if(!grouped[ip]) grouped[ip] = { sessions: [], isIpBanned: true };
                     else grouped[ip].isIpBanned = true;
                 });
             }
 
-            $('v-users').innerText = data.online_count;
+            $('v-users').innerText = data.online_count || 0;
             $('v-ips').innerText = Object.keys(grouped).length;
 
             renderTree(grouped);

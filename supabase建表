@@ -1,0 +1,15 @@
+-- 1. 重新创建买家资产表
+CREATE TABLE buyers (
+  uid TEXT PRIMARY KEY,                                         -- 客户内部唯一ID
+  access_path TEXT UNIQUE NOT NULL,                              -- 专属访问路径哈希
+  token_balance INTEGER DEFAULT 0,                              -- 剩余可用 Token 数量
+  token_cost INTEGER DEFAULT 10,                                -- 单次建房扣除 Token 数量
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP -- 系统自动记录发卡时间
+);
+
+-- 2. 重新添加索引
+CREATE INDEX idx_buyers_access_path ON buyers(access_path);
+
+-- 3. 重新赋予权限 (非常重要，否则程序无法读写新表)
+GRANT ALL PRIVILEGES ON TABLE public.buyers TO service_role;
+GRANT ALL PRIVILEGES ON TABLE public.buyers TO anon;

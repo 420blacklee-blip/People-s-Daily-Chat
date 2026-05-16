@@ -1,3 +1,4 @@
-fastapi[all]
+fastapi
 uvicorn
-websockets
+supabase    
+python-dotenv 
