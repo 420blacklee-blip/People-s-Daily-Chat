@@ -133,36 +133,101 @@
 
         .cost-highlight { color: var(--accent-blue); }
 
-        /* 输入区 */
-        .input-group { margin-bottom: 21px; }
+        /* === 极致美学：动态滑杆系统 === */
+        .slider-group {
+            margin-bottom: 21px; /* 斐波那契数 */
+            width: 100%;
+        }
 
-        .input-group label {
-            display: block;
-            font-size: 13px;
+        .slider-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 13px; /* 斐波那契数 */
+        }
+
+        .slider-header label {
+            font-size: 13px; /* 斐波那契数 */
             font-weight: 500;
             color: var(--text-sub);
-            margin-bottom: 8px; /* 斐波那契数 */
-            text-align: center;
             letter-spacing: 0.5px;
         }
 
-        .input-wrapper {
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 13px; /* 斐波那契数 */
-            border: 1px solid var(--glass-border);
-            padding: 5px; /* 斐波那契数 */
+        .slider-value-display {
+            display: flex;
+            align-items: baseline;
+            gap: 5px; /* 斐波那契数 */
+            color: var(--accent-blue);
+            text-shadow: 0 0 13px rgba(10, 132, 255, 0.4);
         }
 
-        .input-wrapper input {
-            width: 100%;
-            background: transparent;
-            border: none;
-            color: var(--text-main);
+        #sliderValueText {
             font-size: 21px; /* 斐波那契数 */
             font-weight: 600;
-            padding: 8px; /* 斐波那契数 */
-            text-align: center;
+            font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+            line-height: 1;
+        }
+
+        .slider-unit {
+            font-size: 13px; /* 斐波那契数 */
+            font-weight: 500;
+            color: var(--accent-blue);
+            opacity: 0.8;
+        }
+
+        .slider-wrapper {
+            position: relative;
+            width: 100%;
+            padding: 8px 0; /* 斐波那契数 */
+        }
+
+        /* 隐藏默认样式以接管绘制 */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
             outline: none;
+            margin: 0;
+            display: block;
+        }
+
+        /* 动态轨道 */
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 5px; /* 斐波那契数 */
+            /* 核心：利用 CSS 变量实现动态填充光效 */
+            background: linear-gradient(to right, var(--accent-blue) 0%, var(--accent-blue) var(--slider-fill, 12.82%), rgba(255, 255, 255, 0.1) var(--slider-fill, 12.82%), rgba(255, 255, 255, 0.1) 100%);
+            border-radius: 5px; /* 斐波那契数 */
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.5);
+        }
+
+        /* 发光旋钮 */
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 21px; /* 斐波那契数 */
+            width: 21px; /* 斐波那契数 */
+            border-radius: 50%;
+            background: #FFFFFF;
+            box-shadow: 0 0 13px rgba(10, 132, 255, 0.6), inset 0 -2px 4px rgba(0,0,0,0.2);
+            /* 数学居中：(轨道高 5 - 旋钮高 21) / 2 = -8 */
+            margin-top: -8px; 
+            cursor: pointer;
+            transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s;
+        }
+
+        input[type=range]::-webkit-slider-thumb:active {
+            transform: scale(1.25);
+            box-shadow: 0 0 21px rgba(10, 132, 255, 0.9), inset 0 -2px 4px rgba(0,0,0,0.2);
+        }
+
+        .slider-bounds {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px; /* 斐波那契数 */
+            font-size: 10px; 
+            color: rgba(255, 255, 255, 0.25);
+            font-family: ui-monospace, SFMono-Regular, monospace;
+            font-weight: 500;
         }
 
         /* 极致主按钮 */
@@ -348,12 +413,23 @@
         </div>
 
         <div class="glass-card control-panel">
-            <div class="input-group">
-                <label>聊天室存活时间 (秒)</label>
-                <div class="input-wrapper">
-                    <input type="number" id="safeTimeInput" value="180" inputmode="numeric">
+            <div class="slider-group">
+                <div class="slider-header">
+                    <label>聊天室存活时间</label>
+                    <div class="slider-value-display">
+                        <span id="sliderValueText">180</span>
+                        <span class="slider-unit">s</span>
+                    </div>
+                </div>
+                <div class="slider-wrapper">
+                    <input type="range" id="safeTimeInput" min="30" max="1200" step="10" value="180">
+                </div>
+                <div class="slider-bounds">
+                    <span>30</span>
+                    <span>1200</span>
                 </div>
             </div>
+            
             <button class="btn-primary" id="generateBtn" onclick="generateRoom()">创建聊天室</button>
         </div>
 
@@ -393,6 +469,33 @@
         
         // 严格遵循数学方程：C = 2 * π * 66
         const CIRCUMFERENCE = 414.69; 
+
+        // ==========================================
+        // 动态滑杆逻辑引擎
+        // ==========================================
+        const safeTimeInput = document.getElementById('safeTimeInput');
+        const sliderValueText = document.getElementById('sliderValueText');
+
+        function updateSliderFill() {
+            const min = parseFloat(safeTimeInput.min);
+            const max = parseFloat(safeTimeInput.max);
+            const val = parseFloat(safeTimeInput.value);
+            // 计算当前百分比
+            const percentage = ((val - min) / (max - min)) * 100;
+            
+            // 实时更新头部数字
+            sliderValueText.innerText = val;
+            
+            // 将计算的百分比注入 CSS 变量，驱动背景光轨渐变渲染
+            safeTimeInput.style.setProperty('--slider-fill', `${percentage}%`);
+        }
+
+        // 绑定拖拽事件与移动设备触控事件
+        safeTimeInput.addEventListener('input', updateSliderFill);
+        
+        // 初始化运行一次以渲染正确长度
+        updateSliderFill();
+        // ==========================================
 
         function showToast(message, isError = false) {
             const toast = document.getElementById('toast');
@@ -477,7 +580,7 @@
                 showToast("连接服务器超时，请稍后重试", true);
             } finally {
                 btn.disabled = false;
-                btn.innerText = "创建安全通道";
+                btn.innerText = "创建聊天室";
             }
         }
 
