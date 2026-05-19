@@ -626,4 +626,75 @@
             }
         }
 
-        function startServerHeartbeat
+        function startServerHeartbeat(totalSeconds, roomPwd) {
+            const textElem = document.getElementById('countdownText');
+            const progressRing = document.getElementById('progressRing');
+            const resultPanel = document.getElementById('resultPanel');
+
+            // 初始化 UI
+            textElem.innerText = totalSeconds;
+            progressRing.style.strokeDashoffset = '0';
+            progressRing.style.stroke = 'var(--accent-blue)';
+            resultPanel.style.display = 'block';
+
+            if (heartbeatInterval) clearInterval(heartbeatInterval);
+
+            // 每 1 秒向服务器发起心跳探针
+            heartbeatInterval = setInterval(async () => {
+                try {
+                    const res = await fetch(`/api/room/time_left?room_pwd=${roomPwd}`);
+                    const statusData = await res.json();
+
+                    // 1. 服务端反馈通道已销毁或超时
+                    if (statusData.status === 'closed' || statusData.remaining_time <= 0) {
+                        clearInterval(heartbeatInterval);
+                        textElem.innerText = "0";
+                        progressRing.style.strokeDashoffset = CIRCUMFERENCE; 
+                        progressRing.style.stroke = 'var(--glass-border)';
+                        
+                        // 清理内存中的敏感数据
+                        activeRoomUrl = "";
+
+                        // 优雅的消失动画
+                        setTimeout(() => {
+                            resultPanel.style.transition = 'all 0.6s cubic-bezier(0.16, 1, 0.3, 1)';
+                            resultPanel.style.opacity = '0';
+                            resultPanel.style.transform = 'translateY(13px) scale(0.95)';
+                            
+                            setTimeout(() => {
+                                resultPanel.style.display = 'none';
+                                resultPanel.style.opacity = '1';
+                                resultPanel.style.transform = 'translateY(0) scale(1)';
+                                showToast("安全通道已关闭并清理完毕");
+                            }, 600);
+                        }, 1000);
+                    } 
+                    // 2. 正常同步时间 (包括聊天后的时间重置回满)
+                    else {
+                        let timeLeft = statusData.remaining_time;
+                        textElem.innerText = timeLeft;
+                        
+                        const percentage = timeLeft / totalSeconds;
+                        const validPercentage = Math.min(percentage, 1);
+                        const offset = CIRCUMFERENCE - (validPercentage * CIRCUMFERENCE);
+                        
+                        // 倒计时物理平滑退回
+                        progressRing.style.strokeDashoffset = offset;
+
+                        // 状态颜色预警机制
+                        if (validPercentage > 0.5) {
+                            progressRing.style.stroke = 'var(--accent-blue)'; // 安全运行
+                        } else if (validPercentage <= 0.2) {
+                            progressRing.style.stroke = 'var(--accent-red)'; // 紧急状态
+                        } else {
+                            progressRing.style.stroke = '#FF9F0A'; // 预警状态
+                        }
+                    }
+                } catch (error) {
+                    console.warn("探针网络闪断，等待重连恢复...");
+                }
+            }, 1000); // 1秒一次精准脉冲
+        }
+    </script>
+</body>
+</html>
