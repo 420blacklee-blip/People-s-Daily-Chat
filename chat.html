@@ -474,8 +474,8 @@
     };
 
     const T = {
-        zh: { w1:"⚡ 采用 <strong style='color:#66b3ff'>AES-GCM E2EE</strong> 端到端加密", w2:"点击下方 🔑 图标可切换房间", pre:"当前房间: ", clean:"清空记录", rec:"等待重新链接...", pt:"修改安全密钥", et:"发送图片", ph:"输入加密消息...", mtk:"进入房间", mdk:"房间与房间隔离<br>同房间下可聊天", mtkp:"房间名称...", can:"取消", sav:"应用", ku:"密钥已更新", ne:"上传中断：处理超时 (3s)", nc:"未连接", comp:"图片处理中...", big:"图片过大无法压缩", onl:"一次最多4张", wait:"等待网络: ", confirm_clr: "确定要清空当前屏幕上的聊天记录吗？", ban: "🚫 您的IP已被封禁" },
-        en: { w1:"⚡ Using <strong style='color:#66b3ff'>AES-GCM E2EE</strong> Encryption", w2:"Click 🔑 below to change room", pre:"current room: ", clean:"Clear", rec:"reconnection...", pt:"Create a room", et:"Send Image", ph:"Type encrypted message...", mtk:"Create a room", mdk:"Unable to communicate between different rooms", mtkp:"Room name...", can:"Cancel", sav:"Apply", ku:"Key Updated", ne:"Aborted: Timeout (3s)", nc:"Not Connected", comp:"Processing...", big:"Image too large", onl:"Max 4 images", wait:"Waiting: ", confirm_clr: "Are you sure you want to clear the screen?", ban: "🚫 You are BANNED" }
+        zh: { w1:"⚡ 采用 <strong style='color:#66b3ff'>AES-GCM E2EE</strong> 端到端加密", w2:"点击下方 🔑 图标可切换房间", pre:"当前房间: ", clean:"清空记录", rec:"等待重新链接...", pt:"修改安全密钥", et:"发送图片", ph:"输入加密消息...", mtk:"进入房间", mdk:"房间与房间隔离<br>同房间下可聊天", mtkp:"房间名称...", can:"取消", sav:"应用", ku:"密钥已更新", ne:"上传中断：处理超时 (3s)", nc:"未连接", comp:"图片处理中...", big:"图片过大无法压缩", onl:"一次最多9张", wait:"等待网络: ", confirm_clr: "确定要清空当前屏幕上的聊天记录吗？", ban: "🚫 您的IP已被封禁" },
+        en: { w1:"⚡ Using <strong style='color:#66b3ff'>AES-GCM E2EE</strong> Encryption", w2:"Click 🔑 below to change room", pre:"current room: ", clean:"Clear", rec:"reconnection...", pt:"Create a room", et:"Send Image", ph:"Type encrypted message...", mtk:"Create a room", mdk:"Unable to communicate between different rooms", mtkp:"Room name...", can:"Cancel", sav:"Apply", ku:"Key Updated", ne:"Aborted: Timeout (3s)", nc:"Not Connected", comp:"Processing...", big:"Image too large", onl:"Max 9 images", wait:"Waiting: ", confirm_clr: "Are you sure you want to clear the screen?", ban: "🚫 You are BANNED" }
     };
     const L = T[navigator.language.startsWith('zh')?'zh':'en'];
     const REPLAY_CACHE = new Set();
@@ -1029,11 +1029,14 @@
                 let errMsg = d.split(":")[1];
                 $('t-rec').innerText = errMsg;
                 UI.alert.style.display = 'flex';
-                if (errMsg.toLowerCase().includes("ban") || errMsg.includes("封禁")) {
-                    isFatalError = true;
-                    UI.txt.disabled = true;
-                    $('send').disabled = true;
-                    return;
+                if (errMsg.toLowerCase().includes("ban") || errMsg.includes("封禁") || errMsg.includes("太快")) {
+                    // 如果被禁言了不要当成致命错误，只是显示一下
+                    if(errMsg.toLowerCase().includes("ban") || errMsg.includes("永久")) {
+                        isFatalError = true;
+                        UI.txt.disabled = true;
+                        $('send').disabled = true;
+                        return;
+                    }
                 }
                 setTimeout(() => { if($('dot').classList.contains('on') && !isFatalError) UI.alert.style.display='none'; }, 3000);
                 return;
@@ -1169,11 +1172,14 @@
 
     $('b-img').onclick = () => { if (!isFatalError) UI.fIn.click(); };
 
+    // === [核心修改] 带有平滑队列的多图上传处理 ===
     const handleFiles = async (files) => {
         if (isFatalError) return;
-        if(files.length > 4) return alert(L.onl);
+        
+        // 允许一次性最多选择 9 张
+        if(files.length > 9) return alert(L.onl);
         if(files.length === 0) return;
-        for(let i=0; i<files.length; i++){ if (files[i].type.indexOf("image") === -1) { alert(L.onl); UI.fIn.value = ''; return; } }
+        for(let i=0; i<files.length; i++){ if (files[i].type.indexOf("image") === -1) { alert("只能发送图片"); UI.fIn.value = ''; return; } }
 
         let taskList = [];
         for(let i=0; i<files.length; i++) {
@@ -1184,7 +1190,15 @@
         }
         UI.fIn.value = '';
 
-        try { await Promise.all(taskList.map(task => compressAndEncrypt(task))); } catch(e) { console.error("Batch upload err:", e); }
+        try {
+            // 将原来的 Promise.all 并发，改为平滑异步队列
+            // 让每一张图都等上 150ms 再处理下一张，完美骗过风暴防御系统
+            for (let task of taskList) {
+                await compressAndEncrypt(task);
+                // 强制让事件循环休眠 150ms
+                await new Promise(r => setTimeout(r, 150));
+            }
+        } catch(e) { console.error("Batch upload err:", e); }
     };
 
     UI.fIn.onchange = (e) => handleFiles(e.target.files);
