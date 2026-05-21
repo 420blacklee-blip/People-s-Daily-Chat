@@ -7,6 +7,7 @@ E2EE 端到端聊天室 - V6 (Space Jump Dashboard 版)
 [光速注入]: 启动时对 chat.html 进行 O(1) 预编译缓存，验证通过后采用 Binary 极速推送。
 [独立死神]: 废除 server.conf 全局倒计时，由前端控制台为每个临时房间指定独立安全存活时间。
 [战术管控]: 废除 URL 传参触发紧急控制，全局熔断与空间跳跃全部迁移至后台 Dashboard 鉴权 API。
+[商业引擎]: 集成 Supabase，支持 /manage/{access_path} 买家专属控制台与 Token 扣费系统。
 """
 
 import os
@@ -31,6 +32,22 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Head
 from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
+# === 商业化：Supabase 数据库引入 ===
+from dotenv import load_dotenv
+from supabase import create_client, Client
+
+load_dotenv()
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
+
+supabase: Optional[Client] = None
+if SUPABASE_URL and SUPABASE_KEY:
+    try:
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        print("✅ Supabase 商业数据库引擎已连接")
+    except Exception as e:
+        print(f"⚠️ Supabase 连接失败: {e}")
+
 # === 运行时全局变量 ===
 CONFIG_FILE = "server.conf"
 
@@ -51,7 +68,6 @@ IMAGE_MAX: int = 0
 MAX_CLIENTS: int = 0
 SESSION_TIMEOUT: int = 0
 
-# 仅作为未传参时的内存兜底
 SAFE_TIME: int = 180                        
 
 BANNED_IDS: Set[str] = set()
@@ -61,29 +77,25 @@ MAIN_LOOP = None
 
 # 【提速优化】UI 预编译缓存池
 CHAT_HTML_B64_CACHE: str = ""
-CHAT_HTML_RAW_CACHE: bytes = b"" # 【新增】二进制缓存池，实现零编解码下发
+CHAT_HTML_RAW_CACHE: bytes = b"" 
 
-# === 动态加密房间状态机 (默认启动即上锁防扫描) ===
+# === 动态加密房间状态机 ===
 DEFAULT_ROOM_LOCK: bool = True
-# 记录临时房间： { room_hash: {"last_active_time": float, "pwd": str, "safe_time": int} }
 DYNAMIC_ROOMS: Dict[str, Dict[str, Any]] = {}
 
 # === 配置文件管理模块 ===
 
 def load_config():
-    """运维核心：严格从文件加载配置，废弃无用的应急 Key"""
     global SERVER_PORT, BIND_IP, SSL_CERT_PATH, SSL_KEY_PATH, ADMIN_KEY_HASH
     global HISTORY_MAX, IMAGE_MAX, MAX_CLIENTS, SESSION_TIMEOUT, REVERSE_PROXY_MODE
     global IFRAME_URL
 
-    # 初始化/清理状态
     ADMIN_KEY_HASH = None
     IFRAME_URL = ""
     BANNED_IDS.clear()
     BANNED_IPS.clear()
     HALT_WHITELIST_UIDS.clear()
 
-    # 1. 模板生成逻辑：仅在文件不存在时执行一次
     if not os.path.exists(CONFIG_FILE):
         print(f"⚠️ 配置文件 {CONFIG_FILE} 不存在，正在生成标准模板...")
         try:
@@ -97,7 +109,6 @@ def load_config():
             print(f"❌ 无法创建配置文件，启动中止: {e}")
             sys.exit(1)
 
-    # 2. 严格读取逻辑
     try:
         with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
             for line in f:
@@ -139,7 +150,6 @@ def load_config():
                         if value: 
                             [BANNED_IPS.add(x.strip()) for x in value.split('|') if x.strip()]
         
-        # 3. 严格非空校验
         if not BIND_IP or not SERVER_PORT:
             raise ValueError("配置项 BIND_IP 和 PORT 不能为空！")
         if HISTORY_MAX <= 0 or MAX_CLIENTS <= 0:
@@ -153,7 +163,6 @@ def load_config():
         sys.exit(1)
 
 def update_config_file():
-    """增强版配置回写：保护所有配置项不被擦除"""
     try:
         new_lines = []
         config_map = {
@@ -189,7 +198,6 @@ def update_config_file():
                 if not matched:
                     new_lines.append(line)
         
-        # 补全缺失项
         for k, v in config_map.items():
             if k not in found_keys:
                 new_lines.append(f"{k.upper()}={v}\n")
@@ -201,15 +209,12 @@ def update_config_file():
         print(f"❌ 写入配置文件失败: {e}")
 
 def load_chat_html():
-    """【提速重构】启动时直接完成 O(1) 的 Base64 预编译缓存与二进制缓存"""
     global CHAT_HTML_B64_CACHE, CHAT_HTML_RAW_CACHE
     try:
         if os.path.exists("chat.html"):
             with open("chat.html", "r", encoding="utf-8") as f:
                 raw_html = f.read()
-            # 预编译为 Base64 (保留备用)
             CHAT_HTML_B64_CACHE = base64.b64encode(raw_html.encode('utf-8')).decode('utf-8')
-            # 【方案B】预编译为原始二进制
             CHAT_HTML_RAW_CACHE = raw_html.encode('utf-8')
             print("✅ 真实聊天室源码 (chat.html) 已预编译并缓存至内存池，O(1) 闪电下发就绪。")
         else:
@@ -229,16 +234,12 @@ async def room_reaper():
             now = time.time()
             to_delete = []
             
-            # 扫描动态房间池
             for room_hash, info in list(DYNAMIC_ROOMS.items()):
-                # 读取各房间自己独立的 safe_time
                 room_safe_time = info.get('safe_time', SAFE_TIME)
-                # 闲置超时判定
                 if (now - info['last_active_time']) > room_safe_time:
                     to_delete.append(room_hash)
             
             for room_hash in to_delete:
-                # 清退所有在场人员
                 if room_hash in manager.rooms:
                     users = list(manager.rooms[room_hash]['users'])
                     for ws in users:
@@ -250,32 +251,24 @@ async def room_reaper():
                             await ws.close()
                         except: pass
                     
-                    # 【修复点】使用 pop 安全回收连接池，避免 KeyError
                     manager.rooms.pop(room_hash, None)
                 
-                # 【修复点】安全回收内存
                 DYNAMIC_ROOMS.pop(room_hash, None)
                 print(f"💀 [DEATH_REAPER] 临时通道已被死神销毁。")
                 
         except Exception as e:
-            # 【修复点】全局异常捕获，确保背景任务永不崩溃
             print(f"⚠️ [DEATH_REAPER] 死神机制发生异常，已拦截: {e}")
 
-# === FastAPI 生命周期管理 ===
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global MAIN_LOOP
     MAIN_LOOP = asyncio.get_running_loop()
     print("✅ 事件循环已捕获 (Threadsafe Ready).")
-    
-    # 启动房间死神任务
     asyncio.create_task(room_reaper())
     yield
 
-# === FastAPI 应用初始化 ===
 app = FastAPI(lifespan=lifespan)
 
-# === 连接管理器 ===
 class ConnectionManager:
     def __init__(self):
         self.active_connections: List[WebSocket] = []
@@ -370,7 +363,6 @@ class ConnectionManager:
             coros = [c.send_text(message) for c in targets]
         await asyncio.gather(*coros, return_exceptions=True)
 
-    # === [核心新增] 动静分离的速率限制器 ===
     def check_rate_limit(self, websocket: WebSocket, is_binary: bool = False) -> tuple[bool, str]:
         now = time.time()
         stats = self.client_stats.get(websocket)
@@ -380,23 +372,18 @@ class ConnectionManager:
         if now < stats['muted_until']:
             return False, f"SYS_ERR:🚫 你被禁言中，剩余 {int(stats['muted_until'] - now) + 1} 秒"
             
-        # 根据包类型，使用独立的计数器和计时器
         counter_key = 'img_count' if is_binary else 'count'
         time_key = 'img_start' if is_binary else 'start_time'
         
-        # 初始化独立计时器
         if counter_key not in stats:
             stats[counter_key] = 0
             stats[time_key] = now
 
-        # 1秒为一个计算周期
         if now - stats[time_key] > 1.0:
             stats[counter_key] = 0
             stats[time_key] = now
             
         stats[counter_key] += 1
-        
-        # 智能阈值：文本4次，图片12次（完美覆盖九宫格连发+少量余量）
         limit = 12 if is_binary else 4
         
         if stats[counter_key] > limit:
@@ -485,7 +472,6 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-# === [控制台] 输入监控线程 ===
 def console_input_monitor():
     print("\n⌨️  控制台指令系统已启动 (支持 | 分割多个用户)")
     print("   命令格式: ban id1|id2  或  unban id1|id2")
@@ -518,8 +504,6 @@ def console_input_monitor():
                         asyncio.run_coroutine_threadsafe(manager.notify_ban_status(unban_list, False), MAIN_LOOP)
         except: 
             break
-
-# === [核心安全模块] 验证 ===
 
 def verify_hash_key(input_key: str, stored_hash_str: str) -> bool:
     if not stored_hash_str or '$' not in stored_hash_str:
@@ -556,7 +540,46 @@ def get_real_ip(websocket: WebSocket) -> str:
             client_ip = headers["x-real-ip"].strip()
     return client_ip
 
-# === 路由定义 ===
+
+# === 🌟 核心修复：买家专属管理端渲染路由 ===
+@app.get("/manage/{access_path}")
+async def manage_page(request: Request, access_path: str):
+    """验证 access_path 并动态注入变量渲染买家控制台"""
+    if not supabase:
+        return HTMLResponse("<h1>500 - 服务器未配置 Supabase 商业引擎</h1>", 500)
+        
+    try:
+        # 1. 验证链接合法性
+        res = supabase.table('buyers').select('*').eq('access_path', access_path).execute()
+        buyers = res.data
+        if not buyers:
+            return HTMLResponse("<h1>404 - 无效的访问凭证或链接已失效</h1>", 404)
+            
+        buyer = buyers[0]
+        
+        # 2. 判断设备类型
+        user_agent = request.headers.get("user-agent", "").lower()
+        is_mobile = any(kw in user_agent for kw in ["mobile", "android", "iphone", "ipad", "ipod"])
+        
+        template_file = 'mobile-dashboard.html' if is_mobile and os.path.exists('mobile-dashboard.html') else 'dashboard.html'
+        
+        if not os.path.exists(template_file):
+            return HTMLResponse("<h1>404 - 找不到控制台前端模板文件</h1>", 404)
+            
+        with open(template_file, 'r', encoding='utf-8') as f:
+            html = f.read()
+            
+        # 3. 动态替换 Token 等关键数据
+        html = html.replace("{{UID}}", str(buyer.get('uid', 'Unknown')))
+        html = html.replace("{{BALANCE}}", str(buyer.get('token_balance', 0)))
+        html = html.replace("{{COST}}", str(buyer.get('token_cost', 0)))
+        html = html.replace("{{ACCESS_PATH}}", access_path)
+        
+        return HTMLResponse(content=html)
+    except Exception as e:
+        print(f"⚠️ [数据库错误] {e}")
+        return HTMLResponse("<h1>500 - 数据库通信异常，请联系系统管理员</h1>", 500)
+
 
 @app.get("/")
 async def get(): 
@@ -761,21 +784,47 @@ async def api_lock_mode(data: dict = Body(...), x_session_token: Optional[str] =
     print(f"🔒 [MONITOR] 聊天室默认通道状态: {status_msg}")
     return {"status": "ok", "locked": DEFAULT_ROOM_LOCK}
 
+
+# === 🌟 核心修复：商业计费逻辑接入 API ===
 @app.post("/api/admin/generate_room")
 async def api_generate_room(request: Request, data: dict = Body({}), x_session_token: Optional[str] = Header(None)):
-    user_agent = request.headers.get("user-agent", "").lower()
-    mobile_keywords = ["mobile", "android", "iphone", "ipad", "ipod"]
-    is_mobile = any(keyword in user_agent for keyword in mobile_keywords)
     
-    if not is_mobile:
-        if not verify_session(x_session_token):
-            print("⚠️ [安全拦截] 非法 PC 端尝试免密生成临时通道被阻断。")
-            raise HTTPException(401, detail="Invalid Session")
-    else:
-        print("📱 [鉴权放行] 检测到移动端终端接入，免密生成临时通道。")
-    
+    access_path = data.get("access_path", "")
     room_safe_time = int(data.get("safe_time", SAFE_TIME))
+    new_balance = None
     
+    # 【1】买家专属链路（带有 access_path，执行扣费）
+    if access_path and supabase:
+        res = supabase.table('buyers').select('*').eq('access_path', access_path).execute()
+        if not res.data:
+            return JSONResponse({"status": "error", "msg": "无效的专属通道鉴权"}, 403)
+            
+        buyer = res.data[0]
+        cost = buyer['token_cost']
+        balance = buyer['token_balance']
+        
+        if balance < cost:
+            return JSONResponse({"status": "error", "msg": "Token 配额不足，请联系充值"}, 403)
+            
+        new_balance = balance - cost
+        # 更新余额
+        supabase.table('buyers').update({'token_balance': new_balance}).eq('access_path', access_path).execute()
+        print(f"💰 [商业扣费] 客户 {buyer['uid']} 消费 {cost} Token，剩余 {new_balance}")
+        
+    # 【2】最高管理员通道（无 access_path，执行原逻辑鉴权）
+    else:
+        user_agent = request.headers.get("user-agent", "").lower()
+        mobile_keywords = ["mobile", "android", "iphone", "ipad", "ipod"]
+        is_mobile = any(keyword in user_agent for keyword in mobile_keywords)
+        
+        if not is_mobile:
+            if not verify_session(x_session_token):
+                print("⚠️ [安全拦截] 非法 PC 端尝试免密生成临时通道被阻断。")
+                raise HTTPException(401, detail="Invalid Session")
+        else:
+            print("📱 [鉴权放行] 检测到移动端终端接入，免密生成临时通道。")
+    
+    # 生成专属安全房间
     chars = string.ascii_letters + string.digits
     new_pwd = ''.join(random.choice(chars) for _ in range(12))
     room_hash = hashlib.sha256(new_pwd.encode()).hexdigest()
@@ -789,7 +838,12 @@ async def api_generate_room(request: Request, data: dict = Body({}), x_session_t
     }
     
     print(f"🔑 [MONITOR] 分配临时通道: {new_pwd} (独立死亡倒计时 {room_safe_time} 秒已启动)")
-    return {"status": "ok", "room_pwd": new_pwd}
+    
+    resp_data = {"status": "ok", "room_pwd": new_pwd}
+    if new_balance is not None:
+        resp_data["balance"] = new_balance
+        
+    return resp_data
 
 
 @app.get("/static/chart.js")
@@ -920,7 +974,6 @@ async def websocket_endpoint(websocket: WebSocket, room: str = None, uid: str = 
                 blob = payload["bytes"]
                 if not stats or not stats['room']: continue
                 
-                # === [核心修复] 调用速率限制器，声明为二进制文件 (容忍 12次/秒 爆发) ===
                 allowed, err_msg = manager.check_rate_limit(websocket, is_binary=True)
                 if not allowed: await websocket.send_text(err_msg); continue
                 
