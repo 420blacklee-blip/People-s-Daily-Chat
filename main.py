@@ -541,10 +541,10 @@ def get_real_ip(websocket: WebSocket) -> str:
     return client_ip
 
 
-# === 🌟 核心修复：买家专属管理端渲染路由 ===
+# === 🌟 彻底劈开业务与视图：买家控制台专属路由 ===
 @app.get("/manage/{access_path}")
 async def manage_page(request: Request, access_path: str):
-    """验证 access_path 并动态注入变量渲染买家控制台"""
+    """验证 access_path 并强制返回买家终端 (mobile-dashboard.html)"""
     if not supabase:
         return HTMLResponse("<h1>500 - 服务器未配置 Supabase 商业引擎</h1>", 500)
         
@@ -557,14 +557,11 @@ async def manage_page(request: Request, access_path: str):
             
         buyer = buyers[0]
         
-        # 2. 判断设备类型
-        user_agent = request.headers.get("user-agent", "").lower()
-        is_mobile = any(kw in user_agent for kw in ["mobile", "android", "iphone", "ipad", "ipod"])
-        
-        template_file = 'mobile-dashboard.html' if is_mobile and os.path.exists('mobile-dashboard.html') else 'dashboard.html'
+        # 2. 无论访问设备是什么，都强制使用专属的买家端文件
+        template_file = 'mobile-dashboard.html'
         
         if not os.path.exists(template_file):
-            return HTMLResponse("<h1>404 - 找不到控制台前端模板文件</h1>", 404)
+            return HTMLResponse(f"<h1>404 - 找不到买家端模板 {template_file}</h1>", 404)
             
         with open(template_file, 'r', encoding='utf-8') as f:
             html = f.read()
@@ -606,22 +603,18 @@ async def get():
         
     return FileResponse('index.html', media_type="text/html; charset=utf-8")
 
+# === 🌟 彻底劈开业务与视图：老板总控台专属路由 ===
 @app.get("/monitor")
 async def monitor_page(request: Request):
+    """态势感知总控台 - 强制返回 PC 端 Admin UI (dashboard.html)"""
     if not ADMIN_KEY_HASH: 
         return JSONResponse({"status": "error", "msg": "No Key Configured"}, 403)
-        
-    user_agent = request.headers.get("user-agent", "").lower()
-    mobile_keywords = ["mobile", "android", "iphone", "ipad", "ipod"]
-    is_mobile = any(keyword in user_agent for keyword in mobile_keywords)
-    
-    if is_mobile and os.path.exists('mobile-dashboard.html'):
-        return FileResponse('mobile-dashboard.html', media_type="text/html; charset=utf-8")
         
     if not os.path.exists('dashboard.html'): 
         return JSONResponse({"ERROR": "dashboard.html missing"}, 404)
         
     return FileResponse('dashboard.html', media_type="text/html; charset=utf-8")
+
 
 @app.post("/api/auth/login")
 async def auth_login(data: dict = Body(...)):
@@ -785,7 +778,6 @@ async def api_lock_mode(data: dict = Body(...), x_session_token: Optional[str] =
     return {"status": "ok", "locked": DEFAULT_ROOM_LOCK}
 
 
-# === 🌟 核心修复：商业计费逻辑接入 API ===
 @app.post("/api/admin/generate_room")
 async def api_generate_room(request: Request, data: dict = Body({}), x_session_token: Optional[str] = Header(None)):
     
@@ -807,22 +799,15 @@ async def api_generate_room(request: Request, data: dict = Body({}), x_session_t
             return JSONResponse({"status": "error", "msg": "Token 配额不足，请联系充值"}, 403)
             
         new_balance = balance - cost
-        # 更新余额
         supabase.table('buyers').update({'token_balance': new_balance}).eq('access_path', access_path).execute()
         print(f"💰 [商业扣费] 客户 {buyer['uid']} 消费 {cost} Token，剩余 {new_balance}")
         
     # 【2】最高管理员通道（无 access_path，执行原逻辑鉴权）
     else:
-        user_agent = request.headers.get("user-agent", "").lower()
-        mobile_keywords = ["mobile", "android", "iphone", "ipad", "ipod"]
-        is_mobile = any(keyword in user_agent for keyword in mobile_keywords)
-        
-        if not is_mobile:
-            if not verify_session(x_session_token):
-                print("⚠️ [安全拦截] 非法 PC 端尝试免密生成临时通道被阻断。")
-                raise HTTPException(401, detail="Invalid Session")
-        else:
-            print("📱 [鉴权放行] 检测到移动端终端接入，免密生成临时通道。")
+        # 直接验证管理员 Token 即可，取消无意义的设备嗅探
+        if not verify_session(x_session_token):
+            print("⚠️ [安全拦截] 非法尝试免密生成临时通道被阻断。")
+            raise HTTPException(401, detail="Invalid Session")
     
     # 生成专属安全房间
     chars = string.ascii_letters + string.digits
