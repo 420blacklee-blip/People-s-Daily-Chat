@@ -82,7 +82,7 @@ CHAT_HTML_RAW_CACHE: bytes = b"" # 【新增】二进制缓存池，实现零编
 
 # === 动态加密房间状态机 (默认启动即上锁防扫描) ===
 DEFAULT_ROOM_LOCK: bool = True
-# 记录临时房间： { room_hash: {"created_at": float, "last_active_time": float, "pwd": str, "safe_time": int, "owner": str} }
+# 记录临时房间： { room_hash: {"created_at": float, "last_active_time": float, "timer_started": bool, "pwd": str, "safe_time": int, "owner": str} }
 DYNAMIC_ROOMS: Dict[str, Dict[str, Any]] = {}
 
 # === 配置文件管理模块 ===
@@ -248,6 +248,9 @@ async def room_reaper():
             
             # 扫描动态房间池
             for room_hash, info in list(DYNAMIC_ROOMS.items()):
+                if not info.get('timer_started', False):
+                    continue
+
                 # 读取各房间自己独立的 safe_time
                 room_safe_time = info.get('safe_time', SAFE_TIME)
                 
@@ -352,6 +355,14 @@ class ConnectionManager:
             self.rooms[room_id] = {'txt': deque(maxlen=HISTORY_MAX), 'img': deque(maxlen=IMAGE_MAX), 'users': set()}
 
         self.rooms[room_id]['users'].add(websocket)
+
+        if room_id in DYNAMIC_ROOMS and user_id != "BOOTSTRAP_NODE":
+            room_info = DYNAMIC_ROOMS[room_id]
+            if not room_info.get('timer_started', False):
+                room_info['timer_started'] = True
+                room_info['last_active_time'] = time.time()
+                print(f"⏱️ [ROOM_TIMER] 首位用户进入临时通道，闲置倒计时已启动: {room_info.get('pwd', room_id)}")
+
         try:
             r_data = self.rooms[room_id]
             for msg in r_data['txt']: 
@@ -464,12 +475,15 @@ class ConnectionManager:
         for room_pwd, info in DYNAMIC_ROOMS.items():
             room_safe_time = info.get('safe_time', SAFE_TIME)
             created_ts = info['created_at']
-            remaining_time = max(0, int(room_safe_time - (now - info['last_active_time'])))
+            timer_started = info.get('timer_started', False)
+            last_active_ts = info['last_active_time'] if timer_started else now
+            remaining_time = max(0, int(room_safe_time - (now - info['last_active_time']))) if timer_started else room_safe_time
             temp_rooms_info.append({
                 "pwd": info['pwd'],
                 "remaining_time": remaining_time,    
-                "last_active_ts": info['last_active_time'],    
-                "safe_time": room_safe_time          
+                "last_active_ts": last_active_ts,    
+                "safe_time": room_safe_time,
+                "timer_started": timer_started
             })
 
         global DEFAULT_ROOM_LOCK, GLOBAL_CHAT_ENABLED
@@ -761,6 +775,7 @@ async def api_space_jump(data: dict = Body({}), x_session_token: Optional[str] =
     DYNAMIC_ROOMS[room_hash] = {
         "created_at": time.time(),
         "last_active_time": time.time(), 
+        "timer_started": False,
         "has_msg": False, 
         "pwd": new_room_pwd,
         "safe_time": room_safe_time,
@@ -859,6 +874,7 @@ def api_generate_room(request: Request, data: dict = Body({}), x_session_token: 
     DYNAMIC_ROOMS[room_hash] = {
         "created_at": time.time(),
         "last_active_time": time.time(), 
+        "timer_started": False,
         "has_msg": False, 
         "pwd": new_pwd,
         "safe_time": room_safe_time,
@@ -880,9 +896,12 @@ def api_room_time_left(room_pwd: str):
     for room_hash, info in DYNAMIC_ROOMS.items():
         if info['pwd'] == room_pwd:
             room_safe_time = info.get('safe_time', SAFE_TIME)
+            if not info.get('timer_started', False):
+                return {"status": "active", "remaining_time": room_safe_time, "timer_started": False}
+
             # 使用 last_active_time 实时计算，精准同步死神的秒表
             remaining = max(0, int(room_safe_time - (now - info['last_active_time'])))
-            return {"status": "active", "remaining_time": remaining}
+            return {"status": "active", "remaining_time": remaining, "timer_started": True}
             
     # 遍历字典找不到，说明房间已被死神销毁
     return {"status": "closed", "remaining_time": 0}
@@ -1007,6 +1026,7 @@ async def websocket_endpoint(websocket: WebSocket, room: str = None, uid: str = 
                 
                 if stats['room'] in DYNAMIC_ROOMS:
                     DYNAMIC_ROOMS[stats['room']]['has_msg'] = True
+                    DYNAMIC_ROOMS[stats['room']]['timer_started'] = True
                     DYNAMIC_ROOMS[stats['room']]['last_active_time'] = time.time()
                     
                 await manager.broadcast(data, stats['room'], websocket)
@@ -1026,6 +1046,7 @@ async def websocket_endpoint(websocket: WebSocket, room: str = None, uid: str = 
                 
                 if stats['room'] in DYNAMIC_ROOMS:
                     DYNAMIC_ROOMS[stats['room']]['has_msg'] = True
+                    DYNAMIC_ROOMS[stats['room']]['timer_started'] = True
                     DYNAMIC_ROOMS[stats['room']]['last_active_time'] = time.time()
                     
                 await manager.broadcast(blob, stats['room'], websocket)
