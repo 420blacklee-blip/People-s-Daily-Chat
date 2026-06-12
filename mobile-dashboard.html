@@ -936,52 +936,6 @@
             }
         }
 
-        function syncBalanceDisplay(balance, animate = false) {
-            if (balance === undefined || balance === null) return;
-
-            const balanceEl = document.getElementById('balanceDisplay');
-            currentBalance = parseInt(balance, 10) || 0;
-            balanceEl.innerText = currentBalance;
-
-            if (!animate) return;
-            balanceEl.style.color = 'var(--green)';
-            balanceEl.style.transform = 'scale(1.08)';
-            setTimeout(() => {
-                balanceEl.style.color = 'var(--text)';
-                balanceEl.style.transform = 'scale(1)';
-            }, 500);
-        }
-
-        function restoreExistingRoom(data, showNotice = false) {
-            const roomSafeTime = clampSafeTime(data.safe_time || DEFAULT_SAFE_TIME);
-            activeRoomUrl = `${window.location.origin}/#${data.room_pwd}`;
-            activeRoomPwd = data.room_pwd;
-            setRoomCreatedState(roomSafeTime);
-            controlTitle.innerText = "已有聊天室运行中";
-            controlCaption.innerText = "同一账户一次仅允许一个聊天室，已恢复现有链接。";
-            renderCountdown(data.remaining_time, roomSafeTime, data.room_status || 'active', data.timer_started);
-            startServerHeartbeat(roomSafeTime, data.room_pwd);
-            if (showNotice) showToast("已恢复现有聊天室，点击复制直连地址");
-        }
-
-        async function checkActiveRoomOnLoad() {
-            if (!accessPath || accessPath.includes("{{")) return;
-
-            try {
-                const response = await fetch(`/api/buyer/active_room?access_path=${encodeURIComponent(accessPath)}`);
-                const data = await response.json();
-
-                if (!response.ok) return;
-                syncBalanceDisplay(data.balance);
-
-                if (data.status === 'exists' && data.room_pwd) {
-                    restoreExistingRoom(data, false);
-                }
-            } catch (error) {
-                console.warn("活跃房间查询失败，保持创建入口。");
-            }
-        }
-
         async function handlePrimaryAction() {
             if (activeRoomUrl) {
                 await copyRoomUrl();
@@ -1009,18 +963,31 @@
                 const data = await response.json();
 
                 if (response.ok && (data.status === 'ok' || data.status === 'exists')) {
-                    syncBalanceDisplay(data.balance, true);
+                    const balanceEl = document.getElementById('balanceDisplay');
+                    if (data.balance !== undefined) {
+                        currentBalance = data.balance;
+                        balanceEl.innerText = currentBalance;
+                        balanceEl.style.color = 'var(--green)';
+                        balanceEl.style.transform = 'scale(1.08)';
+                        setTimeout(() => {
+                            balanceEl.style.color = 'var(--text)';
+                            balanceEl.style.transform = 'scale(1)';
+                        }, 500);
+                    }
 
                     const roomSafeTime = clampSafeTime(data.safe_time || safeTime);
                     activeRoomUrl = `${window.location.origin}/#${data.room_pwd}`;
                     activeRoomPwd = data.room_pwd;
                     setRoomCreatedState(roomSafeTime);
                     if (data.status === 'exists') {
-                        restoreExistingRoom(data, true);
+                        controlTitle.innerText = "已有聊天室运行中";
+                        controlCaption.innerText = "同一账户一次仅允许一个聊天室，已恢复现有链接。";
+                        renderCountdown(data.remaining_time, roomSafeTime, data.room_status || 'active', data.timer_started);
+                        showToast("已恢复现有聊天室，点击复制直连地址");
                     } else {
                         showToast("聊天室已创建，点击复制直连地址");
-                        startServerHeartbeat(roomSafeTime, data.room_pwd);
                     }
+                    startServerHeartbeat(roomSafeTime, data.room_pwd);
                 } else {
                     showToast(data.msg || "鉴权失败或网络拦截", true);
                 }
@@ -1122,8 +1089,6 @@
             event.preventDefault();
             if (activeRoomPwd) keepRoomAlive();
         });
-
-        checkActiveRoomOnLoad();
     </script>
 </body>
 </html>
