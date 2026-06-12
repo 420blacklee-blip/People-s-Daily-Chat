@@ -275,33 +275,37 @@
         .bubble img { max-width: 100%; max-height: 270px; border-radius: 16px; display: block; cursor: pointer; pointer-events: none; }
 
         .bubble.audio-msg {
-            min-width: min(72vw, 310px);
-            padding: 10px 12px;
+            min-width: min(72vw, 270px);
+            padding: 9px 10px;
             white-space: normal;
         }
-        .audio-wrap { display: flex; align-items: center; gap: 10px; }
-        .audio-tag {
-            flex: 0 0 auto;
-            font-size: 10px;
-            letter-spacing: 0.08em;
-            color: rgba(255,255,255,0.82);
-            padding: 5px 7px;
-            border-radius: 999px;
-            background: rgba(86,216,255,0.14);
-            border: 1px solid rgba(145,226,255,0.24);
-            box-shadow: inset 0 1px 0 rgba(255,255,255,0.24), 0 0 18px rgba(86,216,255,0.14);
+        .voice-player { display: flex; align-items: center; gap: 10px; min-width: 0; }
+        .voice-play {
+            width: 38px; height: 38px; min-width: 38px; border-radius: 50%;
+            border: 1px solid rgba(180,235,255,0.36);
+            color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            background: radial-gradient(circle at 30% 18%, rgba(255,255,255,0.42), transparent 34%), linear-gradient(145deg, rgba(86,216,255,0.28), rgba(138,120,255,0.18));
+            box-shadow: 0 0 0 1px rgba(145,226,255,0.16), 0 0 24px rgba(86,216,255,0.22), inset 0 1px 0 rgba(255,255,255,0.46);
+            backdrop-filter: blur(10px) saturate(220%) brightness(1.08);
+            -webkit-backdrop-filter: blur(10px) saturate(220%) brightness(1.08);
         }
-        .audio-wrap audio {
-            width: min(46vw, 220px);
-            height: 34px;
-            filter: drop-shadow(0 6px 14px rgba(0,0,0,0.22));
+        .voice-play svg { width: 18px; height: 18px; filter: drop-shadow(0 1px 4px rgba(0,0,0,0.22)); }
+        .voice-core { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 7px; }
+        .voice-meta { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 11px; color: rgba(238,248,255,0.70); font-weight: 720; letter-spacing: 0.02em; }
+        .voice-label { color: rgba(238,248,255,0.76); }
+        .voice-time { color: rgba(255,255,255,0.84); font-variant-numeric: tabular-nums; }
+        .voice-track {
+            position: relative; height: 8px; border-radius: 999px; overflow: hidden; cursor: pointer;
+            background: linear-gradient(180deg, rgba(255,255,255,0.17), rgba(255,255,255,0.055)), rgba(0,0,0,0.16);
+            box-shadow: inset 0 1px 1px rgba(255,255,255,0.18), inset 0 -1px 0 rgba(0,0,0,0.20);
         }
-        .audio-duration {
-            flex: 0 0 auto;
-            font-size: 12px;
-            color: rgba(238,248,255,0.68);
-            font-weight: 700;
+        .voice-fill {
+            position: absolute; inset: 0 auto 0 0; width: 0%;
+            border-radius: inherit;
+            background: linear-gradient(90deg, rgba(86,216,255,0.86), rgba(138,120,255,0.82));
+            box-shadow: 0 0 18px rgba(86,216,255,0.38);
         }
+        .voice-audio { display: none; }
 
         /* === [新增] 回复气泡内嵌样式 === */
         .rep-box { background: rgba(0,0,0,0.18); border-left: 2px solid var(--cyan); padding: 6px 9px; margin-bottom: 7px; border-radius: 10px; font-size: 0.85em; color: rgba(255,255,255,0.72); display: flex; flex-direction: column; box-shadow: inset 0 1px 0 rgba(255,255,255,0.08); }
@@ -390,6 +394,99 @@
             mix-blend-mode: screen;
             opacity: 0.72;
         }
+        #bar.voice-mode {
+            align-items: center;
+            border-color: rgba(255, 122, 151, 0.34);
+            background:
+                radial-gradient(circle at 12% 4%, rgba(255,255,255,0.25), transparent 34%),
+                radial-gradient(circle at 92% 100%, rgba(86,216,255,0.17), transparent 38%),
+                linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.038)),
+                rgba(20, 10, 18, 0.22);
+            box-shadow: 0 20px 48px rgba(0,0,0,0.34), 0 0 34px rgba(255,90,99,0.13), inset 0 1px 0 rgba(255,255,255,0.42), inset 0 -1px 0 rgba(255,255,255,0.10);
+        }
+        #bar.voice-mode #b-pwd,
+        #bar.voice-mode #b-img,
+        #bar.voice-mode #txt,
+        #bar.voice-mode #send { display: none; }
+        #voice-panel {
+            position: relative;
+            z-index: 2;
+            display: none;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+            min-width: 0;
+        }
+        #bar.voice-mode #voice-panel { display: flex; }
+        .voice-action {
+            width: var(--btn-size); height: var(--btn-size); min-width: var(--btn-size);
+            border-radius: 50%; border: 1px solid rgba(255,255,255,0.24);
+            display: flex; align-items: center; justify-content: center; cursor: pointer;
+            color: #fff;
+            backdrop-filter: blur(12px) saturate(230%) brightness(1.08);
+            -webkit-backdrop-filter: blur(12px) saturate(230%) brightness(1.08);
+            transition: transform 0.18s ease, box-shadow 0.18s ease;
+        }
+        .voice-action:active { transform: scale(0.95); }
+        .voice-action svg { width: 48%; height: 48%; position: relative; z-index: 1; }
+        #voice-cancel {
+            background: radial-gradient(circle at 30% 18%, rgba(255,255,255,0.34), transparent 34%), linear-gradient(145deg, rgba(255,90,99,0.26), rgba(255,95,207,0.13));
+            box-shadow: 0 0 0 1px rgba(255,90,99,0.16), 0 0 22px rgba(255,90,99,0.22), inset 0 1px 0 rgba(255,255,255,0.40);
+        }
+        #voice-confirm {
+            background: radial-gradient(circle at 30% 18%, rgba(255,255,255,0.42), transparent 34%), linear-gradient(145deg, rgba(86,216,255,0.36), rgba(63,114,255,0.24), rgba(138,120,255,0.18));
+            border-color: rgba(176,232,255,0.46);
+            box-shadow: 0 0 0 1px rgba(145,226,255,0.25), 0 0 20px rgba(86,216,255,0.52), 0 0 46px rgba(63,114,255,0.34), inset 0 1px 0 rgba(255,255,255,0.52);
+        }
+        .voice-live {
+            flex: 1; min-width: 0;
+            display: flex; align-items: center; gap: 12px;
+            padding: 9px 13px;
+            border-radius: 22px;
+            border: 1px solid rgba(255,255,255,0.23);
+            background: linear-gradient(180deg, rgba(255,255,255,0.15), rgba(255,255,255,0.035)), rgba(255,255,255,0.018);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.34), inset 0 -1px 0 rgba(255,255,255,0.07), 0 12px 28px rgba(0,0,0,0.18);
+            backdrop-filter: blur(12px) saturate(220%) brightness(1.10);
+            -webkit-backdrop-filter: blur(12px) saturate(220%) brightness(1.10);
+        }
+        #voice-status {
+            flex: 0 0 auto;
+            color: rgba(255,255,255,0.88);
+            font-size: 13px;
+            font-weight: 780;
+            letter-spacing: 0.01em;
+        }
+        #voice-clock {
+            flex: 0 0 auto;
+            color: rgba(238,248,255,0.76);
+            font-size: 12px;
+            font-weight: 760;
+            font-variant-numeric: tabular-nums;
+        }
+        .voice-wave {
+            flex: 1 1 auto;
+            min-width: 42px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+        .voice-wave i {
+            width: 3px;
+            height: 8px;
+            border-radius: 999px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.92), rgba(86,216,255,0.62));
+            box-shadow: 0 0 12px rgba(86,216,255,0.30);
+            animation: waveLift 0.9s ease-in-out infinite;
+        }
+        .voice-wave i:nth-child(2) { animation-delay: 0.08s; }
+        .voice-wave i:nth-child(3) { animation-delay: 0.16s; }
+        .voice-wave i:nth-child(4) { animation-delay: 0.24s; }
+        .voice-wave i:nth-child(5) { animation-delay: 0.32s; }
+        .voice-wave i:nth-child(6) { animation-delay: 0.40s; }
+        #bar.voice-ready .voice-wave i { animation-play-state: paused; opacity: 0.62; }
+        @keyframes waveLift { 0%,100% { height: 7px; opacity: 0.55; } 50% { height: 22px; opacity: 1; } }
 
         /* 按钮与图标 - 弹性控制 */
         .icon { 
@@ -523,6 +620,11 @@
             #txt { padding-left: 11px; padding-right: 11px; border-radius: 18px; }
             .bubble { max-width: 76vw; }
             .icon svg, #send svg { width: 48%; height: 48%; }
+            #voice-panel { gap: 7px; }
+            .voice-live { gap: 8px; padding: 8px 10px; border-radius: 20px; }
+            #voice-status { font-size: 12px; }
+            #voice-clock { font-size: 11px; }
+            .voice-wave { gap: 3px; min-width: 34px; }
         }
 
         @media (max-width: 360px) {
@@ -530,6 +632,7 @@
             #input-box { padding-left: 8px; padding-right: 8px; }
             #bar { padding: 7px; }
             #txt { padding-left: 9px; padding-right: 9px; }
+            #voice-status { display: none; }
         }
 
         @media (prefers-reduced-motion: reduce) {
@@ -574,6 +677,15 @@
             <button class="icon img-btn" id="b-img"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></button>
             <textarea id="txt" rows="1"></textarea>
             <button id="send"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
+            <div id="voice-panel">
+                <button class="voice-action" id="voice-cancel" title="撤销录音"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+                <div class="voice-live">
+                    <span id="voice-status"></span>
+                    <div class="voice-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+                    <span id="voice-clock">00:00 / 00:30</span>
+                </div>
+                <button class="voice-action" id="voice-confirm" title="发送录音"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
+            </div>
         </div>
     </div>
 
@@ -711,10 +823,12 @@
         clock: `<svg class="st-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
         check: `<svg class="st-icon" viewBox="0 0 24 24"><path d="M18 6L7 17l-5-5"/><path d="M22 10l-7.5 7.5L13 16"/></svg>`
     };
+    const VOICE_PLAY_ICON = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.7v12.6c0 .9 1 1.4 1.8.9l9.3-6.3c.7-.5.7-1.5 0-2L9.8 4.8C9 4.3 8 4.8 8 5.7z"/></svg>`;
+    const VOICE_PAUSE_ICON = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg>`;
 
     const T = {
-        zh: { w1:"⚡ 采用 <strong style='color:#66b3ff'>AES-GCM E2EE</strong> 端到端加密", w2:"语音、图片与文字均在浏览器端加密", pre:"当前房间: ", clean:"清空记录", rec:"等待重新链接...", pt:"发送语音", et:"发送图片", ph:"发送加密消息...", mtk:"进入房间", mdk:"房间与房间隔离<br>同房间下可聊天", mtkp:"房间名称...", can:"取消", sav:"应用", ku:"密钥已更新", ne:"上传中断：处理超时 (3s)", nc:"未连接", comp:"图片处理中...", big:"图片过大无法压缩", onl:"一次最多12张", wait:"等待网络: ", confirm_clr: "确定要清空当前屏幕上的聊天记录吗？", ban: "🚫 您的IP已被封禁", vuns:"当前浏览器不支持语音录制，请更换新版 Chrome / Firefox / Safari。", vden:"麦克风权限被拒绝，无法录音。", vbig:"语音过大，请重录。", vrec:"正在录音，最多30秒", vproc:"语音处理中..." },
-        en: { w1:"⚡ Using <strong style='color:#66b3ff'>AES-GCM E2EE</strong> Encryption", w2:"Voice, images and text are encrypted in your browser", pre:"current room: ", clean:"Clear", rec:"reconnection...", pt:"Record voice", et:"Send Image", ph:"Type encrypted message...", mtk:"Create a room", mdk:"Unable to communicate between different rooms", mtkp:"Room name...", can:"Cancel", sav:"Apply", ku:"Key Updated", ne:"Aborted: Timeout (3s)", nc:"Not Connected", comp:"Processing...", big:"Image too large", onl:"Max 12 images", wait:"Waiting: ", confirm_clr: "Are you sure you want to clear the screen?", ban: "🚫 You are BANNED", vuns:"Voice recording is not supported in this browser. Please use a recent Chrome / Firefox / Safari.", vden:"Microphone permission was denied.", vbig:"Voice file is too large. Please record again.", vrec:"Recording, max 30 seconds", vproc:"Processing voice..." }
+        zh: { w1:"⚡ 采用 <strong style='color:#66b3ff'>AES-GCM E2EE</strong> 端到端加密", w2:"语音、图片与文字均在浏览器端加密", pre:"当前房间: ", clean:"清空记录", rec:"等待重新链接...", pt:"发送语音", et:"发送图片", ph:"发送加密消息...", mtk:"进入房间", mdk:"房间与房间隔离<br>同房间下可聊天", mtkp:"房间名称...", can:"取消", sav:"应用", ku:"密钥已更新", ne:"上传中断：处理超时 (3s)", nc:"未连接", comp:"图片处理中...", big:"图片过大无法压缩", onl:"一次最多12张", wait:"等待网络: ", confirm_clr: "确定要清空当前屏幕上的聊天记录吗？", ban: "🚫 您的IP已被封禁", vuns:"当前浏览器不支持语音录制，请更换新版 Chrome / Firefox / Safari。", vden:"麦克风权限被拒绝，无法录音。", vbig:"语音过大，请重录。", vrec:"正在录音，最多30秒", vrecShort:"录音中", vready:"待发送", vproc:"语音处理中..." },
+        en: { w1:"⚡ Using <strong style='color:#66b3ff'>AES-GCM E2EE</strong> Encryption", w2:"Voice, images and text are encrypted in your browser", pre:"current room: ", clean:"Clear", rec:"reconnection...", pt:"Record voice", et:"Send Image", ph:"Type encrypted message...", mtk:"Create a room", mdk:"Unable to communicate between different rooms", mtkp:"Room name...", can:"Cancel", sav:"Apply", ku:"Key Updated", ne:"Aborted: Timeout (3s)", nc:"Not Connected", comp:"Processing...", big:"Image too large", onl:"Max 12 images", wait:"Waiting: ", confirm_clr: "Are you sure you want to clear the screen?", ban: "🚫 You are BANNED", vuns:"Voice recording is not supported in this browser. Please use a recent Chrome / Firefox / Safari.", vden:"Microphone permission was denied.", vbig:"Voice file is too large. Please record again.", vrec:"Recording, max 30 seconds", vrecShort:"Recording", vready:"Ready", vproc:"Processing voice..." }
     };
     const L = T[navigator.language.startsWith('zh')?'zh':'en'];
     const MAX_IMAGE_BATCH = 12;
@@ -1083,6 +1197,62 @@
         else return { bg: `linear-gradient(${Ang}deg, hsl(${H1},${S}%,${L}%), hsl(${H2},${S}%,${L+5}%), hsl(${H1},${S}%,${L-5}%))` };
     };
 
+    function formatVoiceTime(seconds) {
+        const safe = Math.max(0, Math.floor(seconds || 0));
+        const m = Math.floor(safe / 60).toString().padStart(2, '0');
+        const s = (safe % 60).toString().padStart(2, '0');
+        return `${m}:${s}`;
+    }
+
+    function bindVoicePlayer(player, audio, durationSeconds) {
+        const btn = player.querySelector('.voice-play');
+        const fill = player.querySelector('.voice-fill');
+        const time = player.querySelector('.voice-time');
+        const track = player.querySelector('.voice-track');
+        let total = Math.max(1, Math.min(30, Math.round(durationSeconds || 0)));
+
+        const render = () => {
+            const current = Math.min(audio.currentTime || 0, total);
+            const pct = Math.max(0, Math.min(100, (current / total) * 100));
+            fill.style.width = `${pct}%`;
+            time.textContent = `${formatVoiceTime(current)} / ${formatVoiceTime(total)}`;
+            btn.innerHTML = audio.paused ? VOICE_PLAY_ICON : VOICE_PAUSE_ICON;
+        };
+
+        btn.innerHTML = VOICE_PLAY_ICON;
+        time.textContent = `00:00 / ${formatVoiceTime(total)}`;
+
+        audio.addEventListener('loadedmetadata', () => {
+            if (Number.isFinite(audio.duration) && audio.duration > 0) {
+                total = Math.max(1, Math.min(30, Math.round(audio.duration)));
+                render();
+            }
+        });
+        audio.addEventListener('timeupdate', render);
+        audio.addEventListener('play', render);
+        audio.addEventListener('pause', render);
+        audio.addEventListener('ended', () => {
+            audio.currentTime = 0;
+            render();
+        });
+
+        btn.onclick = e => {
+            e.stopPropagation();
+            if (audio.paused) {
+                document.querySelectorAll('.voice-audio').forEach(item => { if (item !== audio) item.pause(); });
+                audio.play().catch(() => {});
+            }
+            else audio.pause();
+        };
+        track.onclick = e => {
+            e.stopPropagation();
+            const rect = track.getBoundingClientRect();
+            const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+            audio.currentTime = pct * total;
+            render();
+        };
+    }
+
     function append(msgObj, isImg=false, isPending=false, isAudio=false) {
         if(!msgObj) return;
         let who = msgObj.uid, body = msgObj.text, nonce = msgObj.nonce;
@@ -1134,16 +1304,26 @@
             bubble.dataset.raw = '[图片]';
         } else if (isAudio) {
             bubble.className = 'bubble audio-msg';
-            let wrap = mk('div', 'audio-wrap');
-            let tag = mk('span', 'audio-tag', 'VOICE');
+            let player = mk('div', 'voice-player');
+            let playBtn = mk('button', 'voice-play');
+            playBtn.type = 'button';
+            let core = mk('div', 'voice-core');
+            let meta = mk('div', 'voice-meta');
+            let label = mk('span', 'voice-label', 'VOICE');
+            let time = mk('span', 'voice-time', '00:00 / 00:00');
+            let track = mk('div', 'voice-track');
+            let fill = mk('div', 'voice-fill');
             let audio = mk('audio');
-            audio.controls = true;
+            audio.className = 'voice-audio';
             audio.preload = 'metadata';
             audio.src = body;
             let duration = Math.max(1, Math.min(30, Math.round(msgObj.duration || 0)));
-            let dur = mk('span', 'audio-duration', `${duration}s`);
-            wrap.append(tag, audio, dur);
-            bubble.appendChild(wrap);
+            track.appendChild(fill);
+            meta.append(label, time);
+            core.append(meta, track);
+            player.append(playBtn, core, audio);
+            bubble.appendChild(player);
+            bindVoicePlayer(player, audio, duration);
             if (isPending) bubble.id = 'bub-' + nonce;
             bubble.dataset.raw = '[语音]';
         } else {
@@ -1444,6 +1624,11 @@
     let voiceStream = null;
     let voiceStartedAt = 0;
     let voiceStopTimer = null;
+    let voiceTickTimer = null;
+    let voiceChunks = [];
+    let pendingVoice = null;
+    let discardVoiceOnStop = false;
+    let sendVoiceOnStop = false;
 
     function pickAudioMime() {
         if (typeof MediaRecorder === "undefined" || !MediaRecorder.isTypeSupported) return "";
@@ -1457,15 +1642,22 @@
         return candidates.find(type => MediaRecorder.isTypeSupported(type)) || "";
     }
 
-    function setVoiceUi(active) {
-        $('b-pwd').classList.toggle('recording', active);
-        $('t-rec').innerText = active ? L.vrec : L.rec;
-        if (active) {
-            UI.alert.style.display = 'flex';
-        } else if ($('dot').classList.contains('on') && !isFatalError) {
-            setTimeout(() => {
-                if (!$('b-pwd').classList.contains('recording')) UI.alert.style.display = 'none';
-            }, 700);
+    function updateVoiceClock(durationMs) {
+        const seconds = Math.min(30, Math.max(0, Math.floor((durationMs || 0) / 1000)));
+        $('voice-clock').innerText = `${formatVoiceTime(seconds)} / 00:30`;
+    }
+
+    function setVoiceUi(mode, durationMs=0) {
+        const active = mode !== 'idle';
+        $('bar').classList.toggle('voice-mode', active);
+        $('bar').classList.toggle('voice-recording', mode === 'recording');
+        $('bar').classList.toggle('voice-ready', mode === 'ready');
+        $('b-pwd').classList.toggle('recording', mode === 'recording');
+        $('voice-status').innerText = mode === 'ready' ? L.vready : L.vrecShort;
+        updateVoiceClock(durationMs);
+        if (mode === 'idle' && $('dot').classList.contains('on') && !isFatalError) {
+            UI.alert.style.display = 'none';
+            $('t-rec').innerText = L.rec;
         }
     }
 
@@ -1474,12 +1666,15 @@
             clearTimeout(voiceStopTimer);
             voiceStopTimer = null;
         }
+        if (voiceTickTimer) {
+            clearInterval(voiceTickTimer);
+            voiceTickTimer = null;
+        }
         if (voiceStream) {
             voiceStream.getTracks().forEach(track => track.stop());
             voiceStream = null;
         }
         voiceRecorder = null;
-        setVoiceUi(false);
     }
 
     function removePendingBubble(nonce) {
@@ -1489,12 +1684,20 @@
         }
     }
 
+    function clearPendingVoice() {
+        if (pendingVoice && pendingVoice.blobUrl) URL.revokeObjectURL(pendingVoice.blobUrl);
+        pendingVoice = null;
+        voiceChunks = [];
+        discardVoiceOnStop = false;
+        sendVoiceOnStop = false;
+    }
+
     async function encryptVoiceBlob(task) {
         const fileBuffer = await task.blob.arrayBuffer();
         if (fileBuffer.byteLength > MAX_VOICE_PACKET_SIZE - 8192) {
             alert(L.vbig);
             removePendingBubble(task.nonce);
-            return;
+            return false;
         }
 
         const hashBuf = await window.crypto.subtle.digest('SHA-256', fileBuffer);
@@ -1531,7 +1734,7 @@
         if (packet.byteLength > MAX_VOICE_PACKET_SIZE) {
             alert(L.vbig);
             removePendingBubble(nonce);
-            return;
+            return false;
         }
 
         msgQueue.push(packet.buffer);
@@ -1543,25 +1746,66 @@
             let bub = $('bub-' + nonce);
             if (bub) bub.classList.add('loaded');
         });
+        return true;
     }
 
-    async function finishVoiceRecording(chunks, mimeType, durationMs) {
-        if (!chunks.length || durationMs < 250) return;
+    function prepareVoiceRecording(chunks, mimeType, durationMs) {
+        if (!chunks.length || durationMs < 250) {
+            clearPendingVoice();
+            setVoiceUi('idle');
+            return false;
+        }
+
+        const blob = new Blob(chunks, { type: mimeType || "audio/webm" });
+        pendingVoice = {
+            blob,
+            blobUrl: URL.createObjectURL(blob),
+            duration: durationMs,
+            mimeType: mimeType || "audio/webm"
+        };
+        setVoiceUi('ready', durationMs);
+        return true;
+    }
+
+    async function sendPendingVoice() {
+        if (voiceRecorder && voiceRecorder.state === "recording") {
+            sendVoiceOnStop = true;
+            stopVoiceRecording();
+            return;
+        }
+        if (!pendingVoice) return;
+
+        const task = pendingVoice;
+        pendingVoice = null;
+        setVoiceUi('idle');
         $('t-rec').innerText = L.vproc;
         UI.alert.style.display = 'flex';
 
-        const blob = new Blob(chunks, { type: mimeType || "audio/webm" });
         const nonce = Math.random().toString(36).substr(2, 9);
-        const blobUrl = URL.createObjectURL(blob);
-        append({uid: uid, text: blobUrl, nonce: nonce, duration: durationMs / 1000, isAudio: true}, false, true, true);
-        await encryptVoiceBlob({ blob, nonce, duration: durationMs });
+        append({uid: uid, text: task.blobUrl, nonce: nonce, duration: task.duration / 1000, isAudio: true}, false, true, true);
+        const sent = await encryptVoiceBlob({ blob: task.blob, nonce, duration: task.duration });
+        if (!sent) URL.revokeObjectURL(task.blobUrl);
         if ($('dot').classList.contains('on') && !isFatalError) {
             setTimeout(() => { UI.alert.style.display = 'none'; $('t-rec').innerText = L.rec; }, 700);
         }
     }
 
+    function cancelVoiceRecording() {
+        sendVoiceOnStop = false;
+        discardVoiceOnStop = true;
+        if (voiceRecorder && voiceRecorder.state === "recording") {
+            stopVoiceRecording();
+            return;
+        }
+        clearPendingVoice();
+        cleanupVoiceRecorder();
+        setVoiceUi('idle');
+    }
+
     async function startVoiceRecording() {
         if (isFatalError) return;
+        if (activeReplyTarget) $('btn-cancel-rep').click();
+        if (pendingVoice) cancelVoiceRecording();
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder === "undefined") {
             alert(L.vuns);
             return;
@@ -1583,7 +1827,8 @@
             return;
         }
 
-        let chunks = [];
+        clearPendingVoice();
+        voiceChunks = [];
         const options = { audioBitsPerSecond: 64000 };
         if (mimeType) options.mimeType = mimeType;
 
@@ -1602,22 +1847,34 @@
         voiceStartedAt = Date.now();
         const recorder = voiceRecorder;
         recorder.ondataavailable = e => {
-            if (e.data && e.data.size > 0) chunks.push(e.data);
+            if (e.data && e.data.size > 0) voiceChunks.push(e.data);
         };
         recorder.onstop = async () => {
             const durationMs = Math.min(Date.now() - voiceStartedAt, MAX_VOICE_DURATION_MS);
             const actualMime = recorder.mimeType || mimeType || "audio/webm";
             cleanupVoiceRecorder();
-            try { await finishVoiceRecording(chunks, actualMime, durationMs); }
-            catch(e) { console.error("Voice encrypt err:", e); alert(L.vbig); }
+            if (discardVoiceOnStop) {
+                clearPendingVoice();
+                setVoiceUi('idle');
+                return;
+            }
+            const ready = prepareVoiceRecording(voiceChunks, actualMime, durationMs);
+            if (ready && sendVoiceOnStop) {
+                sendVoiceOnStop = false;
+                try { await sendPendingVoice(); }
+                catch(e) { console.error("Voice encrypt err:", e); alert(L.vbig); }
+            }
         };
         recorder.onerror = () => {
             alert(L.vuns);
             cleanupVoiceRecorder();
+            clearPendingVoice();
+            setVoiceUi('idle');
         };
 
         recorder.start(1000);
-        setVoiceUi(true);
+        setVoiceUi('recording', 0);
+        voiceTickTimer = setInterval(() => updateVoiceClock(Date.now() - voiceStartedAt), 250);
         voiceStopTimer = setTimeout(() => stopVoiceRecording(), MAX_VOICE_DURATION_MS);
     }
 
@@ -1632,11 +1889,23 @@
             stopVoiceRecording();
             return;
         }
+        if (pendingVoice) {
+            await sendPendingVoice();
+            return;
+        }
         await startVoiceRecording();
     }
 
     $('b-pwd').onclick = toggleVoiceRecording;
+    $('voice-cancel').onclick = cancelVoiceRecording;
+    $('voice-confirm').onclick = () => sendPendingVoice().catch(e => { console.error("Voice send err:", e); alert(L.vbig); });
     $('b-img').onclick = () => { if (!isFatalError) UI.fIn.click(); };
+    window.addEventListener('beforeunload', () => {
+        discardVoiceOnStop = true;
+        try { if (voiceRecorder && voiceRecorder.state === "recording") voiceRecorder.stop(); } catch(e) {}
+        cleanupVoiceRecorder();
+        clearPendingVoice();
+    });
 
     const handleFiles = async (files) => {
         if (isFatalError) return;
