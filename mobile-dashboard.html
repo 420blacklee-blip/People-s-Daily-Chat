@@ -947,11 +947,6 @@
         async function generateRoom() {
             const safeTime = clampSafeTime(document.getElementById('safeTimeInput').value);
 
-            if (currentBalance < cost) {
-                showToast("配额不足，请联系系统管理员", true);
-                return;
-            }
-
             generateBtn.disabled = true;
             generateBtn.innerText = "正在创建...";
 
@@ -967,7 +962,7 @@
 
                 const data = await response.json();
 
-                if (response.ok && data.status === 'ok') {
+                if (response.ok && (data.status === 'ok' || data.status === 'exists')) {
                     const balanceEl = document.getElementById('balanceDisplay');
                     if (data.balance !== undefined) {
                         currentBalance = data.balance;
@@ -980,11 +975,19 @@
                         }, 500);
                     }
 
+                    const roomSafeTime = clampSafeTime(data.safe_time || safeTime);
                     activeRoomUrl = `${window.location.origin}/#${data.room_pwd}`;
                     activeRoomPwd = data.room_pwd;
-                    setRoomCreatedState(safeTime);
-                    showToast("聊天室已创建，点击复制直连地址");
-                    startServerHeartbeat(safeTime, data.room_pwd);
+                    setRoomCreatedState(roomSafeTime);
+                    if (data.status === 'exists') {
+                        controlTitle.innerText = "已有聊天室运行中";
+                        controlCaption.innerText = "同一账户一次仅允许一个聊天室，已恢复现有链接。";
+                        renderCountdown(data.remaining_time, roomSafeTime, data.room_status || 'active', data.timer_started);
+                        showToast("已恢复现有聊天室，点击复制直连地址");
+                    } else {
+                        showToast("聊天室已创建，点击复制直连地址");
+                    }
+                    startServerHeartbeat(roomSafeTime, data.room_pwd);
                 } else {
                     showToast(data.msg || "鉴权失败或网络拦截", true);
                 }
