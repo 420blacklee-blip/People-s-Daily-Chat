@@ -6,20 +6,20 @@
     <title>私人通道控制终端</title>
     <style>
         :root {
-            --bg: #070911;
+            --bg: #050814;
             --text: #f8fbff;
-            --muted: rgba(248, 251, 255, 0.62);
-            --faint: rgba(248, 251, 255, 0.36);
-            --line: rgba(255, 255, 255, 0.22);
-            --glass: rgba(255, 255, 255, 0.14);
-            --glass-strong: rgba(255, 255, 255, 0.22);
+            --muted: rgba(248, 251, 255, 0.66);
+            --faint: rgba(248, 251, 255, 0.42);
+            --line: rgba(255, 255, 255, 0.32);
+            --glass: rgba(255, 255, 255, 0.18);
+            --glass-strong: rgba(255, 255, 255, 0.30);
             --blue: #5ac8fa;
             --indigo: #7c6cff;
             --green: #34c759;
             --orange: #ff9f0a;
             --red: #ff453a;
-            --shadow: 0 24px 70px rgba(0, 0, 0, 0.42);
-            --radius-xl: 30px;
+            --shadow: 0 30px 90px rgba(0, 0, 0, 0.48);
+            --radius-xl: 34px;
             --radius-lg: 24px;
             --radius-md: 18px;
         }
@@ -48,10 +48,11 @@
             color: var(--text);
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
             background:
-                radial-gradient(circle at 20% 12%, rgba(90, 200, 250, 0.42), transparent 31%),
-                radial-gradient(circle at 84% 8%, rgba(124, 108, 255, 0.40), transparent 28%),
-                radial-gradient(circle at 50% 94%, rgba(52, 199, 89, 0.24), transparent 30%),
-                linear-gradient(160deg, #0b1020 0%, #090b15 44%, #03040a 100%);
+                radial-gradient(circle at 14% 14%, rgba(90, 200, 250, 0.46), transparent 30%),
+                radial-gradient(circle at 88% 12%, rgba(124, 108, 255, 0.46), transparent 31%),
+                radial-gradient(circle at 26% 92%, rgba(52, 199, 89, 0.26), transparent 28%),
+                radial-gradient(circle at 78% 78%, rgba(255, 255, 255, 0.10), transparent 24%),
+                linear-gradient(150deg, #0d1829 0%, #080b19 42%, #03050c 100%);
             display: flex;
             justify-content: center;
             align-items: stretch;
@@ -65,8 +66,8 @@
             width: 280px;
             height: 280px;
             border-radius: 999px;
-            filter: blur(12px);
-            opacity: 0.74;
+            filter: blur(18px);
+            opacity: 0.82;
             pointer-events: none;
         }
 
@@ -125,32 +126,99 @@
         }
 
         .shell {
-            width: min(100%, 430px);
+            width: min(100%, 420px);
             position: relative;
             z-index: 1;
             display: flex;
             flex-direction: column;
             justify-content: center;
-            gap: 14px;
+            gap: 0;
         }
 
-        .hero {
-            padding: 8px 6px 0;
+        .orb {
+            position: fixed;
+            border-radius: 999px;
+            pointer-events: none;
+            opacity: 0.55;
+            filter: blur(2px);
         }
 
-        .eyebrow {
+        .orb-a {
+            width: 84px;
+            height: 84px;
+            left: 12%;
+            top: 17%;
+            background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.95), rgba(90,200,250,0.22) 42%, transparent 72%);
+        }
+
+        .orb-b {
+            width: 112px;
+            height: 112px;
+            right: 9%;
+            bottom: 18%;
+            background: radial-gradient(circle at 35% 30%, rgba(255,255,255,0.72), rgba(124,108,255,0.22) 45%, transparent 74%);
+        }
+
+        .app-card {
+            position: relative;
+            overflow: hidden;
+            border-radius: var(--radius-xl);
+            padding: 22px;
+            border: 1px solid rgba(255, 255, 255, 0.34);
+            background:
+                linear-gradient(145deg, rgba(255, 255, 255, 0.34), rgba(255, 255, 255, 0.10) 42%, rgba(255,255,255,0.16)),
+                rgba(114, 128, 150, 0.23);
+            box-shadow:
+                var(--shadow),
+                inset 0 1px 0 rgba(255, 255, 255, 0.48),
+                inset 0 -1px 0 rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(44px) saturate(190%) brightness(1.08);
+            -webkit-backdrop-filter: blur(44px) saturate(190%) brightness(1.08);
+        }
+
+        .app-card::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(circle at 10% 0%, rgba(255, 255, 255, 0.46), transparent 28%),
+                radial-gradient(circle at 70% 80%, rgba(90, 200, 250, 0.16), transparent 38%),
+                linear-gradient(120deg, rgba(255,255,255,0.32), transparent 28%, rgba(255,255,255,0.10) 58%, transparent 76%);
+            pointer-events: none;
+        }
+
+        .app-card::after {
+            content: "";
+            position: absolute;
+            inset: 1px;
+            border-radius: calc(var(--radius-xl) - 1px);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            background-image:
+                linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+            background-size: 13px 13px;
+            mix-blend-mode: overlay;
+            opacity: 0.28;
+            pointer-events: none;
+        }
+
+        .card-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .topbar {
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            padding: 7px 11px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            padding: 7px 10px;
+            border: 1px solid rgba(255, 255, 255, 0.20);
             border-radius: 999px;
-            background: rgba(255, 255, 255, 0.08);
+            background: rgba(255, 255, 255, 0.12);
             color: var(--muted);
             font-size: 12px;
             font-weight: 650;
-            backdrop-filter: blur(18px);
-            -webkit-backdrop-filter: blur(18px);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
         }
 
         .live-dot {
@@ -161,47 +229,36 @@
             box-shadow: 0 0 0 5px rgba(52, 199, 89, 0.14), 0 0 18px rgba(52, 199, 89, 0.75);
         }
 
-        .hero h1 {
-            margin-top: 14px;
-            font-size: clamp(32px, 9vw, 46px);
+        .identity-row {
+            margin-top: 18px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 14px;
+        }
+
+        .identity-row h1 {
+            min-width: 0;
+            font-size: clamp(40px, 12vw, 58px);
             line-height: 0.98;
             letter-spacing: 0;
-            font-weight: 760;
-            text-wrap: balance;
+            font-weight: 820;
+            text-shadow: 0 10px 30px rgba(0, 0, 0, 0.24);
         }
 
-        .hero p {
-            margin-top: 10px;
-            color: var(--muted);
-            font-size: 14px;
-            line-height: 1.55;
+        .mini-status {
+            flex: 0 0 auto;
+            padding: 8px 11px;
+            border-radius: 17px;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            background: rgba(0, 0, 0, 0.12);
+            color: rgba(255,255,255,0.74);
+            font-size: 12px;
+            font-weight: 720;
         }
 
-        .glass {
-            position: relative;
-            overflow: hidden;
-            border: 1px solid var(--line);
-            background:
-                linear-gradient(145deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.08)),
-                var(--glass);
-            box-shadow: var(--shadow), inset 0 1px 0 rgba(255, 255, 255, 0.24), inset 0 -1px 0 rgba(255, 255, 255, 0.08);
-            backdrop-filter: blur(34px) saturate(175%);
-            -webkit-backdrop-filter: blur(34px) saturate(175%);
-        }
-
-        .glass::before {
-            content: "";
-            position: absolute;
-            inset: 0;
-            background:
-                radial-gradient(circle at 16% 0%, rgba(255, 255, 255, 0.30), transparent 34%),
-                linear-gradient(135deg, rgba(255, 255, 255, 0.18), transparent 32%);
-            pointer-events: none;
-        }
-
-        .wallet {
-            border-radius: var(--radius-lg);
-            padding: 16px;
+        .metrics {
+            margin-top: 18px;
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 10px;
@@ -209,11 +266,13 @@
 
         .metric {
             position: relative;
-            z-index: 1;
-            padding: 13px;
-            border-radius: 19px;
-            background: rgba(255, 255, 255, 0.10);
-            border: 1px solid rgba(255, 255, 255, 0.14);
+            padding: 14px;
+            border-radius: 22px;
+            background:
+                linear-gradient(150deg, rgba(255,255,255,0.24), rgba(255,255,255,0.08)),
+                rgba(255, 255, 255, 0.10);
+            border: 1px solid rgba(255, 255, 255, 0.20);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
         }
 
         .metric-label {
@@ -237,8 +296,13 @@
         }
 
         .control-card {
-            border-radius: var(--radius-xl);
-            padding: 20px;
+            margin-top: 14px;
+            padding: 17px;
+            border-radius: 26px;
+            background:
+                linear-gradient(150deg, rgba(255,255,255,0.20), rgba(255,255,255,0.065)),
+                rgba(3, 8, 17, 0.14);
+            border: 1px solid rgba(255, 255, 255, 0.16);
         }
 
         .card-head {
@@ -252,13 +316,13 @@
 
         .card-title {
             font-size: 19px;
-            font-weight: 760;
+            font-weight: 800;
             letter-spacing: 0;
         }
 
         .card-caption {
             margin-top: 5px;
-            color: var(--muted);
+            color: rgba(248, 251, 255, 0.68);
             font-size: 13px;
             line-height: 1.45;
         }
@@ -269,10 +333,10 @@
             padding: 10px 12px;
             border-radius: 18px;
             text-align: right;
-            background: rgba(90, 200, 250, 0.16);
-            border: 1px solid rgba(90, 200, 250, 0.28);
+            background: rgba(90, 200, 250, 0.18);
+            border: 1px solid rgba(90, 200, 250, 0.36);
             color: #dff6ff;
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24), 0 10px 26px rgba(90, 200, 250, 0.12);
         }
 
         #sliderValueText {
@@ -292,7 +356,7 @@
         .slider-wrap {
             position: relative;
             z-index: 1;
-            margin-top: 24px;
+            margin-top: 20px;
         }
 
         .control-card.room-created .slider-wrap {
@@ -301,8 +365,8 @@
 
         .control-card.room-created {
             background:
-                linear-gradient(145deg, rgba(210, 255, 230, 0.22), rgba(255, 255, 255, 0.08)),
-                rgba(86, 150, 122, 0.24);
+                linear-gradient(150deg, rgba(210, 255, 230, 0.26), rgba(255, 255, 255, 0.09)),
+                rgba(48, 116, 91, 0.24);
         }
 
         .control-card.room-created .time-pill {
@@ -322,13 +386,13 @@
         }
 
         input[type=range]::-webkit-slider-runnable-track {
-            height: 12px;
+            height: 13px;
             border-radius: 999px;
-            border: 1px solid rgba(255, 255, 255, 0.14);
+            border: 1px solid rgba(255, 255, 255, 0.20);
             background:
                 linear-gradient(90deg, var(--blue), var(--indigo)) 0 / var(--slider-fill, 26.3%) 100% no-repeat,
-                rgba(255, 255, 255, 0.12);
-            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.26);
+                rgba(255, 255, 255, 0.13);
+            box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.30), 0 1px 0 rgba(255,255,255,0.10);
         }
 
         input[type=range]::-webkit-slider-thumb {
@@ -336,11 +400,11 @@
             appearance: none;
             width: 30px;
             height: 30px;
-            margin-top: -10px;
+            margin-top: -9px;
             border-radius: 999px;
             border: 1px solid rgba(255, 255, 255, 0.72);
             background: linear-gradient(180deg, #ffffff, #dceeff);
-            box-shadow: 0 9px 24px rgba(90, 200, 250, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.9);
+            box-shadow: 0 11px 28px rgba(90, 200, 250, 0.44), inset 0 1px 0 rgba(255, 255, 255, 0.96);
             transition: transform 0.18s cubic-bezier(0.2, 1, 0.2, 1);
         }
 
@@ -349,7 +413,7 @@
         }
 
         input[type=range]::-moz-range-track {
-            height: 12px;
+            height: 13px;
             border-radius: 999px;
             border: 1px solid rgba(255, 255, 255, 0.14);
             background:
@@ -392,10 +456,10 @@
         }
 
         .btn-primary {
-            margin-top: 22px;
+            margin-top: 18px;
             padding: 16px 18px;
             background: linear-gradient(135deg, rgba(90, 200, 250, 0.96), rgba(124, 108, 255, 0.96));
-            box-shadow: 0 18px 36px rgba(90, 160, 255, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.42);
+            box-shadow: 0 18px 38px rgba(90, 160, 255, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.52);
         }
 
         .btn-primary:active {
@@ -416,26 +480,20 @@
 
         @media (max-height: 720px) {
             body {
-                padding-top: 10px;
-                padding-bottom: 10px;
+                padding-top: 12px;
+                padding-bottom: 12px;
             }
 
-            .shell {
-                gap: 10px;
-            }
-
-            .hero h1 {
-                font-size: 32px;
-                margin-top: 10px;
-            }
-
-            .hero p {
-                display: none;
-            }
-
-            .wallet,
-            .control-card {
+            .app-card {
                 padding: 14px;
+            }
+
+            .identity-row {
+                margin-top: 12px;
+            }
+
+            .identity-row h1 {
+                font-size: 36px;
             }
 
             .metric-value {
@@ -459,43 +517,51 @@
     </div>
 
     <main class="shell">
-        <section class="hero">
-            <div class="eyebrow"><span class="live-dot"></span> 私人通道控制台</div>
-            <h1>{{UID}}</h1>
-            <p>创建一次性加密聊天室。计时会在首位用户进入后开始，最长 600 秒。</p>
-        </section>
+        <div class="orb orb-a"></div>
+        <div class="orb orb-b"></div>
 
-        <section class="glass wallet" id="financePanel">
-            <div class="metric">
-                <div class="metric-label">可用配额</div>
-                <div class="metric-value" id="balanceDisplay">{{BALANCE}}</div>
-            </div>
-            <div class="metric">
-                <div class="metric-label">单次消耗</div>
-                <div class="metric-value cost" id="costDisplay">-{{COST}}</div>
-            </div>
-        </section>
+        <section class="app-card">
+            <div class="card-content">
+                <div class="topbar"><span class="live-dot"></span> 私人通道控制台</div>
 
-        <section class="glass control-card">
-            <div class="card-head">
-                <div>
-                    <div class="card-title" id="controlTitle">聊天室存活时间</div>
-                    <div class="card-caption" id="controlCaption">选择房间闲置销毁时间，上限 600 秒。</div>
+                <div class="identity-row">
+                    <h1>{{UID}}</h1>
+                    <div class="mini-status">最长 600s</div>
                 </div>
-                <div class="time-pill">
-                    <span id="sliderValueText">120</span><span class="slider-unit">s</span>
+
+                <div class="metrics" id="financePanel">
+                    <div class="metric">
+                        <div class="metric-label">可用配额</div>
+                        <div class="metric-value" id="balanceDisplay">{{BALANCE}}</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">单次消耗</div>
+                        <div class="metric-value cost" id="costDisplay">-{{COST}}</div>
+                    </div>
+                </div>
+
+                <div class="control-card">
+                    <div class="card-head">
+                        <div>
+                            <div class="card-title" id="controlTitle">聊天室存活时间</div>
+                            <div class="card-caption" id="controlCaption">选择房间闲置销毁时间，上限 600 秒。</div>
+                        </div>
+                        <div class="time-pill">
+                            <span id="sliderValueText">120</span><span class="slider-unit">s</span>
+                        </div>
+                    </div>
+
+                    <div class="slider-wrap">
+                        <input type="range" id="safeTimeInput" min="30" max="600" step="10" value="120">
+                        <div class="bounds">
+                            <span>30s</span>
+                            <span>600s</span>
+                        </div>
+                    </div>
+
+                    <button class="btn-primary" id="generateBtn" onclick="handlePrimaryAction()">创建聊天室</button>
                 </div>
             </div>
-
-            <div class="slider-wrap">
-                <input type="range" id="safeTimeInput" min="30" max="600" step="10" value="120">
-                <div class="bounds">
-                    <span>30s</span>
-                    <span>600s</span>
-                </div>
-            </div>
-
-            <button class="btn-primary" id="generateBtn" onclick="handlePrimaryAction()">创建聊天室</button>
         </section>
     </main>
 
@@ -539,7 +605,7 @@
             controlTitle.innerText = "聊天室已建立";
             controlCaption.innerText = "链接仅保存在当前页面内存中，点击复制后发送给用户。";
             sliderValueText.innerText = totalSeconds;
-            generateBtn.innerText = "复制聊天地址";
+            generateBtn.innerText = "再点一次复制";
         }
 
         function resetRoomCreateState() {
