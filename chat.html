@@ -131,8 +131,8 @@
 
         /* 顶部栏 - 高度弹性 */
         header { 
-            height: clamp(58px, 7.8vh, 68px); 
-            padding: 0 16px; 
+            height: clamp(50px, 6.8vh, 58px); 
+            padding: 0 18px; 
             display: flex; 
             align-items: center; 
             justify-content: space-between; 
@@ -151,6 +151,8 @@
         header > div:first-child {
             min-width: 0;
             flex: 1 1 auto;
+            display: flex;
+            align-items: center;
         }
         header::after {
             content: "";
@@ -172,6 +174,7 @@
             /* 防溢出 */
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
         }
+        #t-tit { display: none; }
         @keyframes shine { to { background-position: 500%; } }
 
         /* 极窄屏幕隐藏清空记录的文字，只留图标 */
@@ -179,23 +182,19 @@
             #t-clean { display: none; }
         }
 
-        .room-life { --life-color: #24d6a0; --life-glow: rgba(36,214,160,0.45); --pill-glow: rgba(36,214,160,0.10); display: inline-flex; align-items: center; width: fit-content; max-width: min(70vw, 260px); min-height: 22px; margin-top: 6px; padding: 4px 10px 4px 7px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.18); background: linear-gradient(180deg, rgba(255,255,255,0.105), rgba(255,255,255,0.030)), rgba(255,255,255,0.032); box-shadow: inset 0 1px 0 rgba(255,255,255,0.24), 0 0 18px var(--pill-glow), 0 8px 18px rgba(0,0,0,0.12); backdrop-filter: blur(10px) saturate(190%); -webkit-backdrop-filter: blur(10px) saturate(190%); animation: pillBreath 2.6s ease-in-out infinite; transition: border-color 0.35s ease, box-shadow 0.35s ease, background 0.35s ease; }
+        .room-life { --life-pct: 100%; --life-color: #24d6a0; --life-glow: rgba(36,214,160,0.30); display: inline-flex; align-items: center; width: fit-content; max-width: min(70vw, 300px); min-height: 32px; margin-top: 0; padding: 0; color: rgba(238,246,255,0.86); transition: color 0.35s ease; }
         .room-life.room-closed { --life-color: rgba(150,160,176,0.58); --life-glow: rgba(150,160,176,0.16); --pill-glow: rgba(150,160,176,0.08); }
-        .life-main { display: inline-flex; align-items: center; gap: 5px; min-width: 0; font-weight: 700; line-height: 1; letter-spacing: 0.01em; }
-        #life-state { white-space: nowrap; color: rgba(238,246,255,0.78); font-size: 10.5px; }
-        #life-time { color: rgba(255,255,255,0.94); font-size: 10.5px; font-weight: 780; font-variant-numeric: tabular-nums; white-space: nowrap; }
+        .life-main { display: inline-flex; align-items: center; gap: 8px; min-width: 0; font-weight: 730; line-height: 1; letter-spacing: 0.01em; }
+        #life-state { white-space: nowrap; color: rgba(238,246,255,0.82); font-size: 12.5px; text-shadow: 0 1px 12px rgba(0,0,0,0.28); }
+        #life-time { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; color: rgba(255,255,255,0.96); font-size: 9.5px; font-weight: 820; font-variant-numeric: tabular-nums; white-space: nowrap; background: radial-gradient(circle, rgba(15,21,34,0.82) 0 60%, transparent 61%), conic-gradient(var(--life-color) var(--life-pct), rgba(255,255,255,0.11) 0); box-shadow: inset 0 1px 0 rgba(255,255,255,0.16), 0 0 0 2px color-mix(in srgb, var(--life-color) 7%, transparent), 0 0 10px var(--life-glow); text-shadow: 0 1px 7px rgba(0,0,0,0.30); animation: timerBreath 2.4s ease-in-out infinite; transition: background 0.35s ease, box-shadow 0.35s ease; }
         .life-track, .life-fill { display: none; }
         .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--danger); box-shadow: 0 0 0 3px rgba(255,90,99,0.10), 0 0 10px var(--danger); transition: 0.3s; flex-shrink: 0; }
         .dot.on { background: var(--green); box-shadow: 0 0 0 4px rgba(54, 211, 153, 0.14), 0 0 18px rgba(54, 211, 153, 0.8); }
         .room-life .dot,
-        .room-life .dot.on { display: block; width: 6px; height: 6px; background: var(--life-color); box-shadow: 0 0 0 4px color-mix(in srgb, var(--life-color) 18%, transparent), 0 0 14px var(--life-glow); animation: dotBreath 1.55s ease-in-out infinite; }
-        @keyframes pillBreath {
-            0%, 100% { box-shadow: inset 0 1px 0 rgba(255,255,255,0.24), 0 0 12px var(--pill-glow), 0 8px 18px rgba(0,0,0,0.12); }
-            50% { box-shadow: inset 0 1px 0 rgba(255,255,255,0.30), 0 0 24px var(--pill-glow), 0 8px 18px rgba(0,0,0,0.12); }
-        }
-        @keyframes dotBreath {
-            0%, 100% { transform: scale(0.88); opacity: 0.72; }
-            50% { transform: scale(1.12); opacity: 1; }
+        .room-life .dot.on { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+        @keyframes timerBreath {
+            0%, 100% { transform: scale(0.985); box-shadow: inset 0 1px 0 rgba(255,255,255,0.15), 0 0 0 2px color-mix(in srgb, var(--life-color) 6%, transparent), 0 0 8px var(--life-glow); }
+            50% { transform: scale(1.015); box-shadow: inset 0 1px 0 rgba(255,255,255,0.20), 0 0 0 3px color-mix(in srgb, var(--life-color) 9%, transparent), 0 0 14px var(--life-glow); }
         }
 
         .btn { 
@@ -623,10 +622,11 @@
                 --btn-size: clamp(36px, 9.7vw, 42px);
                 --font-base: clamp(14px, 3.85vw, 15px);
             }
-            header { height: clamp(74px, 10.5vh, 90px); padding-left: 12px; padding-right: 12px; align-items: center; gap: 9px; }
+            header { height: clamp(54px, 7.2vh, 62px); padding-left: 14px; padding-right: 12px; align-items: center; gap: 9px; }
             h1 { font-size: clamp(19px, 5.3vw, 22px); letter-spacing: 0; line-height: 1.1; }
-            .room-life { max-width: calc(100vw - 106px); min-height: 22px; padding: 4px 10px 4px 7px; margin-top: 6px; }
-            #life-state, #life-time { font-size: 10.5px; }
+            .room-life { max-width: calc(100vw - 72px); min-height: 22px; padding: 0; margin-top: 0; }
+            #life-state { font-size: 12.5px; }
+            #life-time { width: 32px; height: 32px; font-size: 9.5px; }
             .btn { width: 40px; height: 40px; min-width: 40px; padding: 0; justify-content: center; border-radius: 50%; background: radial-gradient(circle at 28% 12%, rgba(255,255,255,0.23), transparent 36%), linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.032)), rgba(255,255,255,0.030); box-shadow: inset 0 1px 0 rgba(255,255,255,0.32), inset 0 -1px 0 rgba(255,255,255,0.06), 0 9px 22px rgba(0,0,0,0.18); }
             .btn svg { width: 16px; height: 16px; }
             #t-clean { display: none; }
@@ -1143,28 +1143,28 @@
 
     function setLifeColor(ratio, status, timerStarted) {
         let color = '#24d6a0';
-        let glow = 'rgba(36,214,160,0.46)';
+        let glow = 'rgba(36,214,160,0.30)';
         let pillGlow = 'rgba(36,214,160,0.12)';
 
         if (status === 'closed') {
             color = 'rgba(150,160,176,0.45)';
-            glow = 'rgba(150,160,176,0.14)';
+            glow = 'rgba(150,160,176,0.10)';
             pillGlow = 'rgba(150,160,176,0.08)';
         } else if (!timerStarted || status === 'waiting') {
             color = '#24d6a0';
-            glow = 'rgba(36,214,160,0.44)';
+            glow = 'rgba(36,214,160,0.28)';
             pillGlow = 'rgba(36,214,160,0.12)';
         } else if (ratio <= 0.18) {
             color = '#ff5a63';
-            glow = 'rgba(255,90,99,0.52)';
+            glow = 'rgba(255,90,99,0.34)';
             pillGlow = 'rgba(255,90,99,0.14)';
         } else if (ratio <= 0.42) {
             color = '#ffd36a';
-            glow = 'rgba(255,211,106,0.44)';
+            glow = 'rgba(255,211,106,0.30)';
             pillGlow = 'rgba(255,211,106,0.13)';
         } else if (ratio <= 0.70) {
             color = '#24d6a0';
-            glow = 'rgba(36,214,160,0.42)';
+            glow = 'rgba(36,214,160,0.26)';
             pillGlow = 'rgba(36,214,160,0.11)';
         }
 
@@ -1180,6 +1180,7 @@
         const timerStarted = data.timer_started !== false;
         const ratio = status === 'waiting' && !timerStarted ? 1 : Math.max(0, Math.min(1, remaining / total));
 
+        UI.life.style.setProperty('--life-pct', `${ratio * 100}%`);
         setLifeColor(ratio, status, timerStarted);
         UI.life.classList.toggle('room-waiting', status === 'waiting' || !timerStarted);
         UI.life.classList.toggle('room-danger', timerStarted && ratio <= 0.22 && status !== 'closed');
