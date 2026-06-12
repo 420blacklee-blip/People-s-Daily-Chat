@@ -73,6 +73,8 @@ SESSION_TIMEOUT: int = 0
 SAFE_TIME: int = 180                        
 # 房间创建后如果一直没有真实用户进入，最多保留 1200 秒，避免遗忘房间长期占用内存
 UNUSED_ROOM_TTL: int = 1200
+ROOM_SAFE_TIME_MIN: int = 30
+ROOM_SAFE_TIME_MAX: int = 1200
 
 BANNED_IDS: Set[str] = set()
 BANNED_IPS: Set[str] = set()
@@ -101,6 +103,13 @@ def detect_binary_packet_type(blob: bytes) -> str:
         return "voice" if header.get("type") == "audio" else "image"
     except Exception:
         return "image"
+
+def clamp_room_safe_time(value: Any) -> int:
+    try:
+        parsed = int(value)
+    except Exception:
+        parsed = SAFE_TIME
+    return max(ROOM_SAFE_TIME_MIN, min(ROOM_SAFE_TIME_MAX, parsed))
 
 def load_config():
     """运维核心：严格从文件加载配置，废弃无用的应急 Key"""
@@ -803,7 +812,7 @@ async def api_space_jump(data: dict = Body({}), x_session_token: Optional[str] =
     if not verify_session(x_session_token):
         raise HTTPException(401, detail="Invalid Session")
     
-    room_safe_time = int(data.get("safe_time", SAFE_TIME))
+    room_safe_time = clamp_room_safe_time(data.get("safe_time", SAFE_TIME))
     
     chars = string.ascii_letters + string.digits
     new_room_pwd = ''.join(random.choice(chars) for _ in range(12))
@@ -904,7 +913,7 @@ def api_generate_room(request: Request, data: dict = Body({}), x_session_token: 
             raise HTTPException(500, detail="Database Error")
 
     # 3. 正常生成房间逻辑
-    room_safe_time = int(data.get("safe_time", SAFE_TIME))
+    room_safe_time = clamp_room_safe_time(data.get("safe_time", SAFE_TIME))
     chars = string.ascii_letters + string.digits
     new_pwd = ''.join(random.choice(chars) for _ in range(12))
     room_hash = hashlib.sha256(new_pwd.encode()).hexdigest()
@@ -944,6 +953,62 @@ def api_room_time_left(room_pwd: str):
             
     # 遍历字典找不到，说明房间已被死神销毁
     return {"status": "closed", "remaining_time": 0}
+
+
+@app.post("/api/room/keepalive")
+def api_room_keepalive(data: dict = Body({}), x_session_token: Optional[str] = Header(None)):
+    room_pwd = data.get("room_pwd")
+    if not room_pwd:
+        raise HTTPException(400, detail="room_pwd required")
+
+    now = time.time()
+    target_hash = None
+    target_info = None
+    for room_hash, info in DYNAMIC_ROOMS.items():
+        if info.get('pwd') == room_pwd:
+            target_hash = room_hash
+            target_info = info
+            break
+
+    if not target_hash or not target_info:
+        return {"status": "closed", "remaining_time": 0, "timer_started": False}
+
+    is_admin = verify_session(x_session_token)
+    if not is_admin:
+        access_path = data.get("access_path")
+        if not access_path or not supabase:
+            raise HTTPException(401, detail="Unauthorized")
+        try:
+            response = supabase.table('buyers').select('uid').eq('access_path', access_path).execute()
+            if not response.data:
+                raise HTTPException(401, detail="Invalid access path")
+            buyer_uid = response.data[0]['uid']
+            if target_info.get('owner') != buyer_uid:
+                raise HTTPException(403, detail="Room owner mismatch")
+        except HTTPException:
+            raise
+        except Exception as e:
+            print(f"⚠️ [DB Error] 保活鉴权失败: {e}")
+            raise HTTPException(500, detail="Database Error")
+
+    room_safe_time = target_info.get('safe_time', SAFE_TIME)
+    if not target_info.get('timer_started', False):
+        remaining = max(0, int(UNUSED_ROOM_TTL - (now - target_info.get('created_at', now))))
+        return {
+            "status": "waiting",
+            "remaining_time": remaining,
+            "timer_started": False,
+            "msg": "房间尚未开始计时"
+        }
+
+    target_info['last_active_time'] = now
+    print(f"♻️ [KEEPALIVE] 临时通道倒计时已重置: {target_info.get('pwd', target_hash)} ({room_safe_time}s)")
+    return {
+        "status": "active",
+        "remaining_time": room_safe_time,
+        "timer_started": True,
+        "msg": "倒计时已重置"
+    }
 
 
 @app.get("/static/chart.js")
