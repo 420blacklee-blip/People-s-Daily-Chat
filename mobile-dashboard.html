@@ -47,6 +47,9 @@
             min-height: 100dvh;
             color: var(--text);
             font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            text-rendering: geometricPrecision;
+            font-feature-settings: "tnum" 1;
             background:
                 radial-gradient(circle at 14% 14%, rgba(90, 200, 250, 0.46), transparent 30%),
                 radial-gradient(circle at 88% 12%, rgba(124, 108, 255, 0.46), transparent 31%),
@@ -211,13 +214,15 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            padding: 7px 10px;
+            padding: 7px 11px;
             border: 1px solid rgba(255, 255, 255, 0.20);
             border-radius: 999px;
             background: rgba(255, 255, 255, 0.12);
             color: var(--muted);
             font-size: 12px;
-            font-weight: 650;
+            line-height: 1;
+            font-weight: 720;
+            letter-spacing: 0;
             box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
         }
 
@@ -243,7 +248,29 @@
             line-height: 0.98;
             letter-spacing: 0;
             font-weight: 820;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
             text-shadow: 0 10px 30px rgba(0, 0, 0, 0.24);
+        }
+
+        .identity-name {
+            min-width: 0;
+            flex: 1 1 auto;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+        }
+
+        .honorific {
+            flex: 0 0 auto;
+            color: rgba(248, 251, 255, 0.62);
+            font-size: 13px;
+            font-weight: 760;
+            letter-spacing: 0;
+            line-height: 1;
+            transform: translateY(-4px);
+            text-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
         }
 
         .mini-status {
@@ -254,7 +281,9 @@
             background: rgba(0, 0, 0, 0.12);
             color: rgba(255,255,255,0.74);
             font-size: 12px;
+            line-height: 1;
             font-weight: 720;
+            white-space: nowrap;
         }
 
         .metrics {
@@ -278,7 +307,9 @@
         .metric-label {
             color: var(--faint);
             font-size: 12px;
-            font-weight: 700;
+            line-height: 1;
+            font-weight: 760;
+            letter-spacing: 0;
         }
 
         .metric-value {
@@ -288,6 +319,7 @@
             line-height: 1;
             font-weight: 650;
             letter-spacing: 0;
+            font-variant-numeric: tabular-nums;
             transition: color 0.35s ease, transform 0.2s ease;
         }
 
@@ -314,17 +346,26 @@
             align-items: flex-start;
         }
 
+        .card-head > div:first-child {
+            min-width: 0;
+            flex: 1 1 auto;
+        }
+
         .card-title {
             font-size: 19px;
             font-weight: 800;
             letter-spacing: 0;
+            line-height: 1.18;
+            text-wrap: balance;
         }
 
         .card-caption {
             margin-top: 5px;
             color: rgba(248, 251, 255, 0.68);
             font-size: 13px;
-            line-height: 1.45;
+            line-height: 1.52;
+            max-width: 220px;
+            text-wrap: pretty;
         }
 
         .time-pill {
@@ -333,6 +374,9 @@
             padding: 10px 12px;
             border-radius: 18px;
             text-align: right;
+            display: flex;
+            align-items: baseline;
+            justify-content: center;
             background: rgba(90, 200, 250, 0.18);
             border: 1px solid rgba(90, 200, 250, 0.36);
             color: #dff6ff;
@@ -344,6 +388,7 @@
             font-size: 25px;
             line-height: 1;
             font-weight: 760;
+            font-variant-numeric: tabular-nums;
         }
 
         .slider-unit {
@@ -438,7 +483,9 @@
             color: var(--faint);
             font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
             font-size: 11px;
+            line-height: 1;
             font-weight: 700;
+            font-variant-numeric: tabular-nums;
         }
 
         .btn-primary {
@@ -451,7 +498,9 @@
             cursor: pointer;
             font-family: inherit;
             font-size: 16px;
+            line-height: 1;
             font-weight: 750;
+            letter-spacing: 0;
             transition: transform 0.18s cubic-bezier(0.2, 1, 0.2, 1), opacity 0.18s ease;
         }
 
@@ -537,6 +586,10 @@
                 font-size: 36px;
             }
 
+            .honorific {
+                font-size: 12px;
+            }
+
             .metric-value {
                 font-size: 29px;
             }
@@ -547,6 +600,47 @@
 
             .btn-primary {
                 margin-top: 14px;
+            }
+        }
+
+        @media (max-width: 360px) {
+            .app-card {
+                padding: 16px;
+            }
+
+            .identity-row {
+                gap: 10px;
+            }
+
+            .identity-row h1 {
+                font-size: 38px;
+            }
+
+            .mini-status {
+                padding: 7px 9px;
+                font-size: 11px;
+            }
+
+            .metrics {
+                gap: 8px;
+            }
+
+            .metric {
+                padding: 12px;
+                border-radius: 19px;
+            }
+
+            .card-head {
+                gap: 10px;
+            }
+
+            .card-caption {
+                max-width: 190px;
+            }
+
+            .time-pill {
+                min-width: 82px;
+                padding: 9px 10px;
             }
         }
     </style>
@@ -566,8 +660,11 @@
                 <div class="topbar"><span class="live-dot"></span> 私人通道控制台</div>
 
                 <div class="identity-row">
-                    <h1>{{UID}}</h1>
-                    <div class="mini-status">最长 600s</div>
+                    <div class="identity-name">
+                        <span class="honorific">尊敬的</span>
+                        <h1>{{UID}}</h1>
+                    </div>
+                    <div class="mini-status">最长 600 秒</div>
                 </div>
 
                 <div class="metrics" id="financePanel">
