@@ -179,16 +179,24 @@
             #t-clean { display: none; }
         }
 
-        .room-life { --life-pct: 100%; --life-color: #24d6a0; --life-glow: rgba(36,214,160,0.45); width: min(42vw, 176px); max-width: 100%; display: grid; grid-template-columns: minmax(0, 1fr); gap: 5px; font-size: 10.5px; color: rgba(232,242,255,0.78); margin-top: 5px; padding: 0 1px; }
-        .room-life.room-closed { --life-pct: 0%; --life-color: rgba(150,160,176,0.45); --life-glow: rgba(150,160,176,0.14); }
-        .life-main { display: flex; align-items: baseline; justify-content: space-between; gap: 9px; min-width: 0; font-weight: 680; line-height: 1; letter-spacing: 0.01em; }
-        #life-state { white-space: nowrap; color: rgba(238,246,255,0.76); }
-        #life-time { color: rgba(255,255,255,0.92); font-size: 10px; font-weight: 760; font-variant-numeric: tabular-nums; white-space: nowrap; }
-        .life-track { width: 100%; height: 2px; border-radius: 999px; background: rgba(255,255,255,0.12); box-shadow: 0 1px 0 rgba(255,255,255,0.08); overflow: hidden; }
-        .life-fill { width: var(--life-pct); height: 100%; border-radius: inherit; background: var(--life-color); background: linear-gradient(90deg, color-mix(in srgb, var(--life-color) 60%, #fff 40%), var(--life-color)); box-shadow: 0 0 8px var(--life-glow); transition: width 0.48s cubic-bezier(.22,.8,.22,1), background 0.35s ease, box-shadow 0.35s ease; }
+        .room-life { --life-color: #24d6a0; --life-glow: rgba(36,214,160,0.45); --pill-glow: rgba(36,214,160,0.10); display: inline-flex; align-items: center; width: fit-content; max-width: min(70vw, 260px); min-height: 22px; margin-top: 6px; padding: 4px 10px 4px 7px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.18); background: linear-gradient(180deg, rgba(255,255,255,0.105), rgba(255,255,255,0.030)), rgba(255,255,255,0.032); box-shadow: inset 0 1px 0 rgba(255,255,255,0.24), 0 0 18px var(--pill-glow), 0 8px 18px rgba(0,0,0,0.12); backdrop-filter: blur(10px) saturate(190%); -webkit-backdrop-filter: blur(10px) saturate(190%); animation: pillBreath 2.6s ease-in-out infinite; transition: border-color 0.35s ease, box-shadow 0.35s ease, background 0.35s ease; }
+        .room-life.room-closed { --life-color: rgba(150,160,176,0.58); --life-glow: rgba(150,160,176,0.16); --pill-glow: rgba(150,160,176,0.08); }
+        .life-main { display: inline-flex; align-items: center; gap: 5px; min-width: 0; font-weight: 700; line-height: 1; letter-spacing: 0.01em; }
+        #life-state { white-space: nowrap; color: rgba(238,246,255,0.78); font-size: 10.5px; }
+        #life-time { color: rgba(255,255,255,0.94); font-size: 10.5px; font-weight: 780; font-variant-numeric: tabular-nums; white-space: nowrap; }
+        .life-track, .life-fill { display: none; }
         .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--danger); box-shadow: 0 0 0 3px rgba(255,90,99,0.10), 0 0 10px var(--danger); transition: 0.3s; flex-shrink: 0; }
         .dot.on { background: var(--green); box-shadow: 0 0 0 4px rgba(54, 211, 153, 0.14), 0 0 18px rgba(54, 211, 153, 0.8); }
-        .room-life .dot { display: none; }
+        .room-life .dot,
+        .room-life .dot.on { display: block; width: 6px; height: 6px; background: var(--life-color); box-shadow: 0 0 0 4px color-mix(in srgb, var(--life-color) 18%, transparent), 0 0 14px var(--life-glow); animation: dotBreath 1.55s ease-in-out infinite; }
+        @keyframes pillBreath {
+            0%, 100% { box-shadow: inset 0 1px 0 rgba(255,255,255,0.24), 0 0 12px var(--pill-glow), 0 8px 18px rgba(0,0,0,0.12); }
+            50% { box-shadow: inset 0 1px 0 rgba(255,255,255,0.30), 0 0 24px var(--pill-glow), 0 8px 18px rgba(0,0,0,0.12); }
+        }
+        @keyframes dotBreath {
+            0%, 100% { transform: scale(0.88); opacity: 0.72; }
+            50% { transform: scale(1.12); opacity: 1; }
+        }
 
         .btn { 
             position: relative;
@@ -617,8 +625,8 @@
             }
             header { height: clamp(74px, 10.5vh, 90px); padding-left: 12px; padding-right: 12px; align-items: center; gap: 9px; }
             h1 { font-size: clamp(19px, 5.3vw, 22px); letter-spacing: 0; line-height: 1.1; }
-            .room-life { width: min(45vw, 176px); max-width: calc(100vw - 106px); padding: 0 1px; min-height: 0; font-size: 10.5px; margin-top: 6px; background: transparent; border-radius: 0; }
-            .life-track { width: 100%; height: 2px; }
+            .room-life { max-width: calc(100vw - 106px); min-height: 22px; padding: 4px 10px 4px 7px; margin-top: 6px; }
+            #life-state, #life-time { font-size: 10.5px; }
             .btn { width: 40px; height: 40px; min-width: 40px; padding: 0; justify-content: center; border-radius: 50%; background: radial-gradient(circle at 28% 12%, rgba(255,255,255,0.23), transparent 36%), linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.032)), rgba(255,255,255,0.030); box-shadow: inset 0 1px 0 rgba(255,255,255,0.32), inset 0 -1px 0 rgba(255,255,255,0.06), 0 9px 22px rgba(0,0,0,0.18); }
             .btn svg { width: 16px; height: 16px; }
             #t-clean { display: none; }
@@ -660,10 +668,9 @@
             <div id="room-life" class="room-life room-waiting">
                 <div class="life-main">
                     <span id="dot" class="dot" aria-hidden="true"></span>
-                    <span id="life-state">距离房间销毁</span>
+                    <span id="life-state">离房间关闭还剩</span>
                     <span id="life-time">--:--</span>
                 </div>
-                <div class="life-track" aria-hidden="true"><div id="life-fill" class="life-fill"></div></div>
             </div>
         </div>
         <button id="b-clean" class="btn">
@@ -1120,45 +1127,50 @@
     let isSending = false;
     let reconnectAttempts = 0;
 
-    const UI = { chat:$('chat'), txt:$('txt'), life:$('room-life'), lifeFill:$('life-fill'), lifeState:$('life-state'), lifeTime:$('life-time'), mod:$('modal'), min:$('m-in'), alert:$('alert'), fIn:$('f-in') };
+    const UI = { chat:$('chat'), txt:$('txt'), life:$('room-life'), lifeState:$('life-state'), lifeTime:$('life-time'), mod:$('modal'), min:$('m-in'), alert:$('alert'), fIn:$('f-in') };
 
     let roomLifeInterval = null;
     let roomLifeToken = 0;
 
     function formatLifeTime(seconds) {
         const safe = Math.max(0, parseInt(seconds, 10) || 0);
-        const m = Math.floor(safe / 60).toString().padStart(2, '0');
-        const s = (safe % 60).toString().padStart(2, '0');
-        return `${m}:${s}`;
+        return `${safe}秒`;
     }
 
     function setRoomLabel(pwd) {
-        UI.lifeState.textContent = '距离房间销毁';
+        UI.lifeState.textContent = '离房间关闭还剩';
     }
 
     function setLifeColor(ratio, status, timerStarted) {
         let color = '#24d6a0';
         let glow = 'rgba(36,214,160,0.46)';
+        let pillGlow = 'rgba(36,214,160,0.12)';
 
         if (status === 'closed') {
             color = 'rgba(150,160,176,0.45)';
             glow = 'rgba(150,160,176,0.14)';
+            pillGlow = 'rgba(150,160,176,0.08)';
         } else if (!timerStarted || status === 'waiting') {
-            color = '#56d8ff';
-            glow = 'rgba(86,216,255,0.38)';
+            color = '#24d6a0';
+            glow = 'rgba(36,214,160,0.44)';
+            pillGlow = 'rgba(36,214,160,0.12)';
         } else if (ratio <= 0.18) {
             color = '#ff5a63';
             glow = 'rgba(255,90,99,0.52)';
+            pillGlow = 'rgba(255,90,99,0.14)';
         } else if (ratio <= 0.42) {
             color = '#ffd36a';
             glow = 'rgba(255,211,106,0.44)';
+            pillGlow = 'rgba(255,211,106,0.13)';
         } else if (ratio <= 0.70) {
-            color = '#56d8ff';
-            glow = 'rgba(86,216,255,0.38)';
+            color = '#24d6a0';
+            glow = 'rgba(36,214,160,0.42)';
+            pillGlow = 'rgba(36,214,160,0.11)';
         }
 
         UI.life.style.setProperty('--life-color', color);
         UI.life.style.setProperty('--life-glow', glow);
+        UI.life.style.setProperty('--pill-glow', pillGlow);
     }
 
     function renderRoomLife(data) {
@@ -1168,14 +1180,13 @@
         const timerStarted = data.timer_started !== false;
         const ratio = status === 'waiting' && !timerStarted ? 1 : Math.max(0, Math.min(1, remaining / total));
 
-        UI.life.style.setProperty('--life-pct', `${ratio * 100}%`);
         setLifeColor(ratio, status, timerStarted);
         UI.life.classList.toggle('room-waiting', status === 'waiting' || !timerStarted);
         UI.life.classList.toggle('room-danger', timerStarted && ratio <= 0.22 && status !== 'closed');
         UI.life.classList.toggle('room-closed', status === 'closed');
         UI.lifeTime.textContent = formatLifeTime(remaining);
 
-        UI.lifeState.textContent = '距离房间销毁';
+        UI.lifeState.textContent = '离房间关闭还剩';
     }
 
     function startRoomLifeProbe() {
@@ -1198,7 +1209,7 @@
                 }
             } catch (error) {
                 if (token !== roomLifeToken) return;
-                UI.lifeState.textContent = '距离房间销毁';
+                UI.lifeState.textContent = '离房间关闭还剩';
             }
         };
 
