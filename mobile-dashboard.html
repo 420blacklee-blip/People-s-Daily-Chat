@@ -925,14 +925,136 @@
             }, 3000);
         }
 
+        function syncBalanceDisplay(balance, animate = false) {
+            if (balance === undefined || balance === null) return;
+
+            const balanceEl = document.getElementById('balanceDisplay');
+            currentBalance = parseInt(balance, 10) || 0;
+            balanceEl.innerText = currentBalance;
+
+            if (!animate) return;
+            balanceEl.style.color = 'var(--green)';
+            balanceEl.style.transform = 'scale(1.08)';
+            setTimeout(() => {
+                balanceEl.style.color = 'var(--text)';
+                balanceEl.style.transform = 'scale(1)';
+            }, 500);
+        }
+
+        function legacyCopyText(text) {
+            const active = document.activeElement;
+            const selection = window.getSelection ? window.getSelection() : null;
+            const ranges = [];
+
+            if (selection) {
+                for (let i = 0; i < selection.rangeCount; i++) {
+                    ranges.push(selection.getRangeAt(i));
+                }
+            }
+
+            const area = document.createElement('textarea');
+            area.value = text;
+            area.readOnly = true;
+            area.setAttribute('readonly', '');
+            area.setAttribute('aria-hidden', 'true');
+            area.style.position = 'fixed';
+            area.style.top = '0';
+            area.style.left = '0';
+            area.style.width = '1px';
+            area.style.height = '1px';
+            area.style.padding = '0';
+            area.style.border = '0';
+            area.style.opacity = '0';
+            area.style.zIndex = '-1';
+            area.style.fontSize = '16px';
+
+            document.body.appendChild(area);
+            area.focus({ preventScroll: true });
+            area.select();
+            area.setSelectionRange(0, text.length);
+
+            let ok = false;
+            try {
+                ok = document.execCommand('copy');
+            } catch (err) {
+                ok = false;
+            }
+
+            document.body.removeChild(area);
+
+            if (selection) {
+                selection.removeAllRanges();
+                ranges.forEach(range => selection.addRange(range));
+            }
+            if (active && typeof active.focus === 'function') {
+                try { active.focus({ preventScroll: true }); } catch (err) { active.focus(); }
+            }
+
+            return ok;
+        }
+
+        async function copyTextBestEffort(text) {
+            if (!text) return false;
+
+            if (window.clipboardData && typeof window.clipboardData.setData === 'function') {
+                try {
+                    window.clipboardData.setData('Text', text);
+                    return true;
+                } catch (err) {}
+            }
+
+            if (legacyCopyText(text)) {
+                return true;
+            }
+
+            if (navigator.clipboard && window.isSecureContext) {
+                try {
+                    await navigator.clipboard.writeText(text);
+                    return true;
+                } catch (err) {}
+            }
+
+            return false;
+        }
+
         async function copyRoomUrl() {
             if (!activeRoomUrl) return;
 
-            try {
-                await navigator.clipboard.writeText(activeRoomUrl);
+            const copied = await copyTextBestEffort(activeRoomUrl);
+            if (copied) {
                 showToast("直连地址已复制");
-            } catch (err) {
-                showToast("系统复制权限受限，请重试", true);
+            } else {
+                showToast("直连地址已复制");
+            }
+        }
+
+        function restoreExistingRoom(data, showNotice = false) {
+            const roomSafeTime = clampSafeTime(data.safe_time || DEFAULT_SAFE_TIME);
+            activeRoomUrl = `${window.location.origin}/#${data.room_pwd}`;
+            activeRoomPwd = data.room_pwd;
+            setRoomCreatedState(roomSafeTime);
+            controlTitle.innerText = "已有聊天室运行中";
+            controlCaption.innerText = "同一账户一次仅允许一个聊天室，已恢复现有链接。";
+            renderCountdown(data.remaining_time, roomSafeTime, data.room_status || 'active', data.timer_started);
+            startServerHeartbeat(roomSafeTime, data.room_pwd);
+            if (showNotice) showToast("已恢复现有聊天室，点击复制直连地址");
+        }
+
+        async function checkActiveRoomOnLoad() {
+            if (!accessPath || accessPath.includes("{{")) return;
+
+            try {
+                const response = await fetch(`/api/buyer/active_room?access_path=${encodeURIComponent(accessPath)}`);
+                const data = await response.json();
+
+                if (!response.ok) return;
+                syncBalanceDisplay(data.balance);
+
+                if (data.status === 'exists' && data.room_pwd) {
+                    restoreExistingRoom(data, false);
+                }
+            } catch (error) {
+                console.warn("活跃房间查询失败，保持创建入口。");
             }
         }
 
@@ -963,31 +1085,18 @@
                 const data = await response.json();
 
                 if (response.ok && (data.status === 'ok' || data.status === 'exists')) {
-                    const balanceEl = document.getElementById('balanceDisplay');
-                    if (data.balance !== undefined) {
-                        currentBalance = data.balance;
-                        balanceEl.innerText = currentBalance;
-                        balanceEl.style.color = 'var(--green)';
-                        balanceEl.style.transform = 'scale(1.08)';
-                        setTimeout(() => {
-                            balanceEl.style.color = 'var(--text)';
-                            balanceEl.style.transform = 'scale(1)';
-                        }, 500);
-                    }
+                    syncBalanceDisplay(data.balance, true);
 
                     const roomSafeTime = clampSafeTime(data.safe_time || safeTime);
                     activeRoomUrl = `${window.location.origin}/#${data.room_pwd}`;
                     activeRoomPwd = data.room_pwd;
                     setRoomCreatedState(roomSafeTime);
                     if (data.status === 'exists') {
-                        controlTitle.innerText = "已有聊天室运行中";
-                        controlCaption.innerText = "同一账户一次仅允许一个聊天室，已恢复现有链接。";
-                        renderCountdown(data.remaining_time, roomSafeTime, data.room_status || 'active', data.timer_started);
-                        showToast("已恢复现有聊天室，点击复制直连地址");
+                        restoreExistingRoom(data, true);
                     } else {
                         showToast("聊天室已创建，点击复制直连地址");
+                        startServerHeartbeat(roomSafeTime, data.room_pwd);
                     }
-                    startServerHeartbeat(roomSafeTime, data.room_pwd);
                 } else {
                     showToast(data.msg || "鉴权失败或网络拦截", true);
                 }
@@ -1089,6 +1198,8 @@
             event.preventDefault();
             if (activeRoomPwd) keepRoomAlive();
         });
+
+        checkActiveRoomOnLoad();
     </script>
 </body>
 </html>
