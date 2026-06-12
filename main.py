@@ -70,6 +70,8 @@ SESSION_TIMEOUT: int = 0
 
 # 仅作为未传参时的内存兜底
 SAFE_TIME: int = 180                        
+# 房间创建后如果一直没有真实用户进入，最多保留 1200 秒，避免遗忘房间长期占用内存
+UNUSED_ROOM_TTL: int = 1200
 
 BANNED_IDS: Set[str] = set()
 BANNED_IPS: Set[str] = set()
@@ -249,6 +251,8 @@ async def room_reaper():
             # 扫描动态房间池
             for room_hash, info in list(DYNAMIC_ROOMS.items()):
                 if not info.get('timer_started', False):
+                    if (now - info.get('created_at', now)) > UNUSED_ROOM_TTL:
+                        to_delete.append(room_hash)
                     continue
 
                 # 读取各房间自己独立的 safe_time
@@ -260,6 +264,9 @@ async def room_reaper():
                     to_delete.append(room_hash)
             
             for room_hash in to_delete:
+                room_info = DYNAMIC_ROOMS.get(room_hash, {})
+                was_never_used = not room_info.get('timer_started', False)
+
                 # 清退所有在场人员
                 if room_hash in manager.rooms:
                     users = list(manager.rooms[room_hash]['users'])
@@ -277,7 +284,10 @@ async def room_reaper():
                 
                 # 安全回收内存
                 DYNAMIC_ROOMS.pop(room_hash, None)
-                print(f"💀 [DEATH_REAPER] 临时通道寿命耗尽，已被死神彻底抹除。")
+                if was_never_used:
+                    print(f"💀 [DEATH_REAPER] 未使用临时通道超过 {UNUSED_ROOM_TTL}s，已自动回收。")
+                else:
+                    print(f"💀 [DEATH_REAPER] 临时通道寿命耗尽，已被死神彻底抹除。")
                 
         except Exception as e:
             # 全局异常捕获，确保背景任务永不崩溃
@@ -897,7 +907,8 @@ def api_room_time_left(room_pwd: str):
         if info['pwd'] == room_pwd:
             room_safe_time = info.get('safe_time', SAFE_TIME)
             if not info.get('timer_started', False):
-                return {"status": "active", "remaining_time": room_safe_time, "timer_started": False}
+                remaining = max(0, int(UNUSED_ROOM_TTL - (now - info.get('created_at', now))))
+                return {"status": "waiting", "remaining_time": remaining, "timer_started": False}
 
             # 使用 last_active_time 实时计算，精准同步死神的秒表
             remaining = max(0, int(room_safe_time - (now - info['last_active_time'])))
