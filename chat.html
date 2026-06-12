@@ -3,22 +3,22 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-    <title>Neon Space Final</title>
+    <title>Welcome to the squad！</title>
     <style>
         /* === CSS 样式定义 === */
         :root {
             /* 主题色变量 */
-            --bg: #060913; --pink: #ff6ac8; --blue: #4b7dff; --cyan: #64d8ff; --gold: #ffd166;
-            --green: #36d399; --violet: #8f7cff;
+            --bg: #03050c; --pink: #ff5fcf; --blue: #3f72ff; --cyan: #56d8ff; --gold: #ffd36a;
+            --green: #24d6a0; --violet: #8a78ff;
             /* 渐变色变量 */
             --grad-me: linear-gradient(135deg, rgba(89, 126, 255, 0.98), rgba(142, 106, 255, 0.98));
             --bubble-me: linear-gradient(145deg, rgba(83, 128, 255, 0.94), rgba(135, 93, 255, 0.92));
             --bubble-peer: linear-gradient(145deg, rgba(255,255,255,0.15), rgba(255,255,255,0.065));
             /* 背景和边框颜色 */
-            --bg-glass: rgba(12, 16, 28, 0.68); --border: rgba(255, 255, 255, 0.16);
-            --hairline: rgba(255,255,255,0.08);
+            --bg-glass: rgba(6, 9, 18, 0.76); --border: rgba(255, 255, 255, 0.16);
+            --hairline: rgba(255,255,255,0.075);
             /* 文本颜色 */
-            --text: #f8fbff; --sub: rgba(230, 238, 255, 0.62); --danger: #ff5a63;
+            --text: #f8fbff; --sub: rgba(224, 236, 255, 0.64); --danger: #ff5a63;
             --shadow-strong: 0 26px 90px rgba(0, 0, 0, 0.55);
             --shadow-soft: 0 14px 42px rgba(0, 0, 0, 0.28);
             
@@ -27,9 +27,9 @@
             
             /* === [核心修改] 弹性尺寸系统 (Fluid Scaling) === */
             /* 基础间距：最小8px，偏好1.5%视口最小边，最大14px */
-            --gap-base: clamp(8px, 1.5vmin, 14px);
+            --gap-base: clamp(7px, 1.35vmin, 13px);
             /* 按钮尺寸：最小38px(防误触)，偏好11%视口最小边，最大48px(防傻大) */
-            --btn-size: clamp(38px, 11vmin, 48px);
+            --btn-size: clamp(38px, 10.5vmin, 48px);
             /* 字体大小：根据视口宽度动态调整 */
             --font-base: clamp(14px, 4vw, 16px);
             /* 输入栏Padding：当高度不足(键盘弹出)时自动压缩 */
@@ -47,9 +47,9 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
             color: var(--text); 
             background:
-                radial-gradient(circle at 18% 12%, rgba(100, 216, 255, 0.22), transparent 30%),
-                radial-gradient(circle at 88% 8%, rgba(255, 106, 200, 0.18), transparent 28%),
-                radial-gradient(circle at 50% 100%, rgba(54, 211, 153, 0.13), transparent 34%),
+                radial-gradient(circle at 18% 10%, rgba(86, 216, 255, 0.18), transparent 28%),
+                radial-gradient(circle at 86% 4%, rgba(138, 120, 255, 0.16), transparent 26%),
+                radial-gradient(circle at 50% 100%, rgba(36, 214, 160, 0.10), transparent 34%),
                 var(--bg);
             overflow: hidden; 
             /* 强制使用计算出的真实高度，解决Firefox地址栏问题 */
@@ -64,14 +64,14 @@
         /* 动态背景动画 */
         .bg-anim {
             position: fixed; inset: 0; z-index: -1;
-            filter: blur(74px); opacity: 0.78;
-            animation: flow 36s ease-in-out infinite;
+            filter: blur(68px); opacity: 0.88;
+            animation: flow 34s ease-in-out infinite;
             background:
-                radial-gradient(at 8% 5%, rgba(72, 130, 255, 0.74) 0px, transparent 42%),
-                radial-gradient(at 95% 8%, rgba(255, 112, 197, 0.62) 0px, transparent 38%),
-                radial-gradient(at 88% 92%, rgba(84, 229, 180, 0.54) 0px, transparent 40%),
-                radial-gradient(at 12% 88%, rgba(126, 107, 255, 0.62) 0px, transparent 44%),
-                radial-gradient(at 48% 45%, rgba(96, 216, 255, 0.28) 0px, transparent 36%);
+                radial-gradient(at 8% 3%, rgba(64, 112, 255, 0.50) 0px, transparent 40%),
+                radial-gradient(at 96% 8%, rgba(255, 95, 207, 0.34) 0px, transparent 35%),
+                radial-gradient(at 92% 94%, rgba(36, 214, 160, 0.34) 0px, transparent 38%),
+                radial-gradient(at 14% 88%, rgba(138, 120, 255, 0.42) 0px, transparent 42%),
+                radial-gradient(at 48% 46%, rgba(86, 216, 255, 0.16) 0px, transparent 34%);
             background-size: 300% 300%;
         }
         @keyframes flow {
@@ -88,7 +88,7 @@
             position: relative; 
             overflow: hidden;
             background:
-                linear-gradient(180deg, rgba(255,255,255,0.105), rgba(255,255,255,0.035)),
+                linear-gradient(180deg, rgba(255,255,255,0.095), rgba(255,255,255,0.026)),
                 var(--bg-glass);
             backdrop-filter: blur(30px) saturate(180%);
             -webkit-backdrop-filter: blur(30px) saturate(180%);
@@ -101,11 +101,11 @@
             pointer-events: none;
             z-index: 0;
             background:
-                linear-gradient(115deg, rgba(255,255,255,0.18), transparent 27%),
-                linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255,255,255,0.026) 1px, transparent 1px);
-            background-size: auto, 36px 36px, 36px 36px;
-            mask-image: linear-gradient(to bottom, rgba(0,0,0,0.9), transparent 72%);
+                linear-gradient(118deg, rgba(255,255,255,0.16), transparent 25%),
+                linear-gradient(rgba(86,216,255,0.026) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(86,216,255,0.020) 1px, transparent 1px);
+            background-size: auto, 34px 34px, 34px 34px;
+            mask-image: linear-gradient(to bottom, rgba(0,0,0,0.82), transparent 74%);
         }
         #app > * { position: relative; z-index: 1; }
         
@@ -113,13 +113,15 @@
         @media (min-width: 768px) {
             body { align-items: center; background-image: url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgb3BhY2l0eT0iMC4wNSI+PHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjZmZmIi8+PC9zdmc+'); }
             #app { 
-                max-width: 900px; 
+                max-width: 860px; 
                 /* 桌面端高度稍微留一点边距 */
                 height: calc(var(--app-height) - 40px); 
                 border-radius: 30px; 
                 border: 1px solid rgba(255,255,255,0.16); 
                 box-shadow: var(--shadow-strong), inset 0 1px 0 rgba(255,255,255,0.22); 
             }
+            #chat { padding: 24px 26px 22px; }
+            #input-box { padding-left: 26px; padding-right: 26px; }
         }
 
         /* 顶部栏 - 高度弹性 */
@@ -129,6 +131,7 @@
             display: flex; 
             align-items: center; 
             justify-content: space-between; 
+            gap: 14px;
             background:
                 linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.045)),
                 rgba(9, 13, 24, 0.54);
@@ -139,15 +142,19 @@
             flex-shrink: 0;
             box-shadow: 0 12px 36px rgba(0,0,0,0.18);
         }
+        header > div:first-child {
+            min-width: 0;
+            flex: 1 1 auto;
+        }
         
         h1 {
-            font-size: clamp(16px, 5vw, 20px); 
+            font-size: clamp(18px, 4.8vw, 21px); 
             margin: 0;
             color: #fff;
             text-shadow: 0 1px 20px rgba(100, 216, 255, 0.22);
             font-weight: 760; letter-spacing: 0;
             /* 防溢出 */
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 45vw;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
         }
         @keyframes shine { to { background-position: 500%; } }
 
@@ -156,7 +163,7 @@
             #t-clean { display: none; }
         }
 
-        .badge { display: inline-flex; align-items: center; gap: 7px; font-size: 11px; color: var(--sub); margin-top: 6px; background: rgba(255,255,255,0.075); padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.12); min-height: 24px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.12); max-width: min(60vw, 420px); }
+        .badge { display: inline-flex; align-items: center; gap: 7px; font-size: 11px; color: var(--sub); margin-top: 6px; background: rgba(255,255,255,0.072); padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.12); min-height: 24px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.13), 0 8px 24px rgba(0,0,0,0.16); max-width: min(64vw, 430px); }
         #hint { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--danger); box-shadow: 0 0 0 4px rgba(255,90,99,0.10), 0 0 12px var(--danger); transition: 0.3s; flex-shrink: 0; }
         .dot.on { background: var(--green); box-shadow: 0 0 0 4px rgba(54, 211, 153, 0.14), 0 0 18px rgba(54, 211, 153, 0.8); }
@@ -261,6 +268,8 @@
             padding: 0 16px var(--bar-pad) 16px; 
             padding-bottom: calc(var(--bar-pad) + env(safe-area-inset-bottom)); 
             position: relative; pointer-events: none; display: flex; flex-direction: column;
+            width: 100%;
+            min-width: 0;
             transition: padding 0.2s; /* 平滑过渡 */
         }
         /* 键盘弹出时，去掉底部安全区，防止悬空 */
@@ -288,11 +297,15 @@
             align-items: flex-end; 
             gap: var(--gap-base); 
             box-shadow: 0 18px 52px rgba(0,0,0,0.42), inset 0 1px 0 rgba(255,255,255,0.22); 
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+            overflow: hidden;
         }
 
         /* 按钮与图标 - 弹性控制 */
         .icon { 
-            width: var(--btn-size); height: var(--btn-size); 
+            width: var(--btn-size); height: var(--btn-size); min-width: var(--btn-size);
             border-radius: 50%; border: 1px solid rgba(255,255,255,0.10); background: rgba(255,255,255,0.075); color: rgba(238,244,255,0.72); 
             display: flex; justify-content: center; align-items: center; cursor: pointer; flex-shrink: 0; 
             transition: transform 0.18s ease, background 0.18s ease, color 0.18s ease;
@@ -302,7 +315,7 @@
         .img-btn { color: rgba(220,230,255,0.72); } .img-btn:hover { background: rgba(100, 216, 255, 0.13); color: #fff; }
 
         #txt { 
-            flex: 1; background: rgba(255,255,255,0.055); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; color: #fff; 
+            flex: 1 1 0%; min-width: 0; width: 0; background: rgba(255,255,255,0.055); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; color: #fff; 
             font-size: var(--font-base); 
             padding: 11px 13px; max-height: 120px; min-height: 24px; resize: none; caret-color: var(--cyan); 
             transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
@@ -311,7 +324,7 @@
         #txt::placeholder { color: rgba(230,238,255,0.42); }
         
         #send { 
-            width: var(--btn-size); height: var(--btn-size); 
+            width: var(--btn-size); height: var(--btn-size); min-width: var(--btn-size);
             border-radius: 50%; 
             background: linear-gradient(135deg, #64d8ff, #4b7dff 48%, #8f7cff); 
             border: none; color: #fff; cursor: pointer; 
@@ -346,11 +359,29 @@
         #f-in { display: none; }
 
         @media (max-width: 520px) {
-            header { padding-left: 14px; padding-right: 14px; }
+            :root {
+                --gap-base: 7px;
+                --btn-size: clamp(36px, 9.7vw, 42px);
+                --font-base: clamp(14px, 3.85vw, 15px);
+            }
+            header { height: clamp(78px, 13vh, 112px); padding-left: 14px; padding-right: 14px; align-items: center; }
+            h1 { font-size: clamp(23px, 7vw, 28px); letter-spacing: -0.01em; }
+            .badge { max-width: 68vw; padding: 5px 11px; font-size: 12px; background: rgba(255,255,255,0.066); }
+            .btn { width: 48px; height: 48px; padding: 0; justify-content: center; border-radius: 50%; background: rgba(255,255,255,0.055); }
+            #t-clean { display: none; }
             #chat { padding: 16px 12px 18px; gap: 13px; }
             #input-box { padding-left: 10px; padding-right: 10px; }
+            #bar { border-radius: 28px; padding: 8px; gap: 7px; }
+            #txt { padding-left: 11px; padding-right: 11px; border-radius: 18px; }
             .bubble { max-width: 76vw; }
-            .badge { max-width: 62vw; }
+            .icon svg, #send svg { width: 48%; height: 48%; }
+        }
+
+        @media (max-width: 360px) {
+            :root { --btn-size: 35px; --gap-base: 6px; }
+            #input-box { padding-left: 8px; padding-right: 8px; }
+            #bar { padding: 7px; }
+            #txt { padding-left: 9px; padding-right: 9px; }
         }
 
         @media (prefers-reduced-motion: reduce) {
@@ -515,8 +546,8 @@
     }
     /* === 结束 探针逻辑 === */
 
-    const DOC_TITLE = "私人加密聊天室";
-    const PAGE_HEADING = "私人加密通信";
+    const DOC_TITLE = "加密通讯";
+    const PAGE_HEADING = "加密通讯";
     const $ = i => document.getElementById(i);
     const mk = (t,c,h,safe) => {
         let e=document.createElement(t);
