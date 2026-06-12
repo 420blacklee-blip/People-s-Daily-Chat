@@ -775,50 +775,8 @@ def api_buyer_info(access_path: str):
             
         row = response.data[0]
         return {"uid": row['uid'], "balance": row['token_balance'], "cost": row['token_cost']}
-    except HTTPException:
-        raise
     except Exception as e:
         print(f"⚠️ [DB Error] 数据库查询失败: {e}")
-        raise HTTPException(500, detail="Database Error")
-
-
-@app.get("/api/buyer/active_room")
-def api_buyer_active_room(access_path: str):
-    if not supabase:
-        raise HTTPException(500, detail="Supabase not configured")
-
-    try:
-        response = supabase.table('buyers').select('uid, token_balance, token_cost').eq('access_path', access_path).execute()
-        if not response.data:
-            raise HTTPException(401, detail="Invalid path")
-
-        row = response.data[0]
-        existing_room = find_active_room_by_owner(row['uid'])
-
-        if not existing_room:
-            return {
-                "status": "none",
-                "uid": row['uid'],
-                "balance": row['token_balance'],
-                "cost": row['token_cost']
-            }
-
-        _, room_info, runtime = existing_room
-        return {
-            "status": "exists",
-            "uid": row['uid'],
-            "balance": row['token_balance'],
-            "cost": row['token_cost'],
-            "room_pwd": room_info.get('pwd'),
-            "safe_time": runtime["safe_time"],
-            "remaining_time": runtime["remaining_time"],
-            "timer_started": runtime["timer_started"],
-            "room_status": runtime["status"]
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        print(f"⚠️ [DB Error] 买家活跃房间查询失败: {e}")
         raise HTTPException(500, detail="Database Error")
 
 
