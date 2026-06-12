@@ -89,6 +89,7 @@ CHAT_HTML_RAW_CACHE: bytes = b"" # 【新增】二进制缓存池，实现零编
 DEFAULT_ROOM_LOCK: bool = True
 # 记录临时房间： { room_hash: {"created_at": float, "last_active_time": float, "timer_started": bool, "pwd": str, "safe_time": int, "owner": str} }
 DYNAMIC_ROOMS: Dict[str, Dict[str, Any]] = {}
+ROOM_CREATE_LOCK = threading.Lock()
 
 # === 配置文件管理模块 ===
 
@@ -110,6 +111,53 @@ def clamp_room_safe_time(value: Any) -> int:
     except Exception:
         parsed = SAFE_TIME
     return max(ROOM_SAFE_TIME_MIN, min(ROOM_SAFE_TIME_MAX, parsed))
+
+def get_room_runtime_status(info: Dict[str, Any], now: Optional[float] = None) -> Dict[str, Any]:
+    now = now or time.time()
+    room_safe_time = info.get('safe_time', SAFE_TIME)
+
+    if not info.get('timer_started', False):
+        remaining = max(0, int(UNUSED_ROOM_TTL - (now - info.get('created_at', now))))
+        return {
+            "status": "waiting" if remaining > 0 else "closed",
+            "remaining_time": remaining,
+            "timer_started": False,
+            "safe_time": room_safe_time
+        }
+
+    remaining = max(0, int(room_safe_time - (now - info.get('last_active_time', now))))
+    return {
+        "status": "active" if remaining > 0 else "closed",
+        "remaining_time": remaining,
+        "timer_started": True,
+        "safe_time": room_safe_time
+    }
+
+def find_active_room_by_owner(owner: str) -> Optional[tuple[str, Dict[str, Any], Dict[str, Any]]]:
+    now = time.time()
+    for room_hash, info in list(DYNAMIC_ROOMS.items()):
+        if info.get('owner') != owner:
+            continue
+        runtime = get_room_runtime_status(info, now)
+        if runtime["status"] != "closed":
+            return room_hash, info, runtime
+    return None
+
+def create_dynamic_room(owner: str, room_safe_time: int) -> tuple[str, str]:
+    chars = string.ascii_letters + string.digits
+    new_pwd = ''.join(random.choice(chars) for _ in range(12))
+    room_hash = hashlib.sha256(new_pwd.encode()).hexdigest()
+
+    DYNAMIC_ROOMS[room_hash] = {
+        "created_at": time.time(),
+        "last_active_time": time.time(),
+        "timer_started": False,
+        "has_msg": False,
+        "pwd": new_pwd,
+        "safe_time": room_safe_time,
+        "owner": owner
+    }
+    return new_pwd, room_hash
 
 def load_config():
     """运维核心：严格从文件加载配置，废弃无用的应急 Key"""
@@ -877,6 +925,7 @@ def api_generate_room(request: Request, data: dict = Body({}), x_session_token: 
     
     is_admin = verify_session(x_session_token)
     access_path = data.get("access_path")
+    room_safe_time = clamp_room_safe_time(data.get("safe_time", SAFE_TIME))
     
     buyer_uid = "admin"
     new_balance = "无限"
@@ -890,46 +939,55 @@ def api_generate_room(request: Request, data: dict = Body({}), x_session_token: 
             raise HTTPException(500, detail="Supabase not configured")
             
         try:
-            response = supabase.table('buyers').select('uid, token_balance, token_cost').eq('access_path', access_path).execute()
-            
-            if not response.data:
-                raise HTTPException(401, detail="Invalid access path")
+            with ROOM_CREATE_LOCK:
+                response = supabase.table('buyers').select('uid, token_balance, token_cost').eq('access_path', access_path).execute()
                 
-            row = response.data[0]
-            buyer_uid = row['uid']
-            balance = row['token_balance']
-            cost = row['token_cost']
-            
-            if balance < cost:
-                return {"status": "error", "msg": f"Token 余额不足，请充值。剩余: {balance}"}
+                if not response.data:
+                    raise HTTPException(401, detail="Invalid access path")
+                    
+                row = response.data[0]
+                buyer_uid = row['uid']
+                balance = row['token_balance']
+                cost = row['token_cost']
+
+                existing_room = find_active_room_by_owner(buyer_uid)
+                if existing_room:
+                    _, room_info, runtime = existing_room
+                    print(f"↩️ [Token 计费] 账户 {buyer_uid} 已有未结束通道，拒绝重复创建: {room_info.get('pwd')}")
+                    return {
+                        "status": "exists",
+                        "msg": "当前账户已有未结束聊天室，请先使用现有链接。",
+                        "room_pwd": room_info.get('pwd'),
+                        "balance": balance,
+                        "safe_time": runtime["safe_time"],
+                        "remaining_time": runtime["remaining_time"],
+                        "timer_started": runtime["timer_started"],
+                        "room_status": runtime["status"]
+                    }
                 
-            # 执行计费扣除
-            new_balance = balance - cost
-            supabase.table('buyers').update({'token_balance': new_balance}).eq('uid', buyer_uid).execute()
-            print(f"💰 [Token 计费] 账户 {buyer_uid} 消耗 {cost} Token，剩余: {new_balance}")
+                if balance < cost:
+                    return {"status": "error", "msg": f"Token 余额不足，请充值。剩余: {balance}"}
+                    
+                # 执行计费扣除
+                new_balance = balance - cost
+                supabase.table('buyers').update({'token_balance': new_balance}).eq('uid', buyer_uid).execute()
+                new_pwd, _ = create_dynamic_room(buyer_uid, room_safe_time)
+                print(f"💰 [Token 计费] 账户 {buyer_uid} 消耗 {cost} Token，剩余: {new_balance}")
+                print(f"🔑 [MONITOR] 分配临时通道: {new_pwd} (寿命 {room_safe_time}s, 归属: {buyer_uid})")
+                return {"status": "ok", "room_pwd": new_pwd, "balance": new_balance, "safe_time": room_safe_time}
             
+        except HTTPException:
+            raise
         except Exception as e:
             print(f"⚠️ [DB Error] 数据库计费操作失败: {e}")
             raise HTTPException(500, detail="Database Error")
 
-    # 3. 正常生成房间逻辑
-    room_safe_time = clamp_room_safe_time(data.get("safe_time", SAFE_TIME))
-    chars = string.ascii_letters + string.digits
-    new_pwd = ''.join(random.choice(chars) for _ in range(12))
-    room_hash = hashlib.sha256(new_pwd.encode()).hexdigest()
-    
-    DYNAMIC_ROOMS[room_hash] = {
-        "created_at": time.time(),
-        "last_active_time": time.time(), 
-        "timer_started": False,
-        "has_msg": False, 
-        "pwd": new_pwd,
-        "safe_time": room_safe_time,
-        "owner": buyer_uid  # 记录所有者
-    }
+    # 3. 管理员生成房间逻辑
+    with ROOM_CREATE_LOCK:
+        new_pwd, _ = create_dynamic_room(buyer_uid, room_safe_time)
     
     print(f"🔑 [MONITOR] 分配临时通道: {new_pwd} (寿命 {room_safe_time}s, 归属: {buyer_uid})")
-    return {"status": "ok", "room_pwd": new_pwd, "balance": new_balance}
+    return {"status": "ok", "room_pwd": new_pwd, "balance": new_balance, "safe_time": room_safe_time}
 
 
 # 【核心新增2】：前端实时心跳探针接口
@@ -942,17 +1000,10 @@ def api_room_time_left(room_pwd: str):
     now = time.time()
     for room_hash, info in DYNAMIC_ROOMS.items():
         if info['pwd'] == room_pwd:
-            room_safe_time = info.get('safe_time', SAFE_TIME)
-            if not info.get('timer_started', False):
-                remaining = max(0, int(UNUSED_ROOM_TTL - (now - info.get('created_at', now))))
-                return {"status": "waiting", "remaining_time": remaining, "timer_started": False}
-
-            # 使用 last_active_time 实时计算，精准同步死神的秒表
-            remaining = max(0, int(room_safe_time - (now - info['last_active_time'])))
-            return {"status": "active", "remaining_time": remaining, "timer_started": True}
+            return get_room_runtime_status(info, now)
             
     # 遍历字典找不到，说明房间已被死神销毁
-    return {"status": "closed", "remaining_time": 0}
+    return {"status": "closed", "remaining_time": 0, "timer_started": True, "safe_time": SAFE_TIME}
 
 
 @app.post("/api/room/keepalive")
