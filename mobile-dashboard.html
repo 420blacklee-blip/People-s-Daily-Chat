@@ -369,23 +369,75 @@
         }
 
         .time-pill {
+            --timer-deg: 0deg;
+            --timer-color: var(--blue);
             flex: 0 0 auto;
-            min-width: 92px;
-            padding: 10px 12px;
-            border-radius: 18px;
+            min-width: 116px;
+            padding: 8px 10px;
+            border-radius: 22px;
             text-align: right;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 9px;
+            background:
+                radial-gradient(circle at 20% 12%, rgba(255,255,255,0.22), transparent 36%),
+                linear-gradient(150deg, rgba(255,255,255,0.18), rgba(255,255,255,0.055)),
+                rgba(90, 200, 250, 0.12);
+            border: 1px solid rgba(90, 200, 250, 0.34);
+            color: #dff6ff;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.30), 0 10px 26px rgba(90, 200, 250, 0.12);
+            transition: transform 0.18s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .control-card.room-created .time-pill {
+            cursor: pointer;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .control-card.room-created .time-pill:active {
+            transform: scale(0.975);
+        }
+
+        .timer-ring {
+            position: relative;
+            width: 54px;
+            height: 54px;
+            border-radius: 999px;
+            display: grid;
+            place-items: center;
+            background:
+                conic-gradient(var(--timer-color) var(--timer-deg), rgba(255,255,255,0.13) 0),
+                rgba(255,255,255,0.08);
+            box-shadow: 0 0 24px rgba(90, 200, 250, 0.16), inset 0 1px 0 rgba(255,255,255,0.22);
+        }
+
+        .timer-ring::before {
+            content: "";
+            position: absolute;
+            inset: 5px;
+            border-radius: inherit;
+            background:
+                radial-gradient(circle at 35% 22%, rgba(255,255,255,0.26), transparent 40%),
+                rgba(8, 14, 24, 0.62);
+            border: 1px solid rgba(255,255,255,0.16);
+            backdrop-filter: blur(10px) saturate(180%);
+            -webkit-backdrop-filter: blur(10px) saturate(180%);
+        }
+
+        .timer-core {
+            position: relative;
+            z-index: 1;
             display: flex;
             align-items: baseline;
             justify-content: center;
-            background: rgba(90, 200, 250, 0.18);
-            border: 1px solid rgba(90, 200, 250, 0.36);
-            color: #dff6ff;
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24), 0 10px 26px rgba(90, 200, 250, 0.12);
+            min-width: 0;
         }
 
         #sliderValueText {
             font-family: ui-rounded, "SF Pro Rounded", ui-monospace, SFMono-Regular, Consolas, monospace;
-            font-size: 25px;
+            font-size: 18px;
             line-height: 1;
             font-weight: 760;
             font-variant-numeric: tabular-nums;
@@ -396,6 +448,31 @@
             color: rgba(223, 246, 255, 0.72);
             font-size: 12px;
             font-weight: 700;
+        }
+
+        .timer-copy {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+            min-width: 0;
+            text-align: left;
+        }
+
+        .timer-state {
+            color: rgba(248, 251, 255, 0.86);
+            font-size: 12px;
+            line-height: 1;
+            font-weight: 780;
+            white-space: nowrap;
+        }
+
+        .timer-hint {
+            color: rgba(248, 251, 255, 0.48);
+            font-size: 10px;
+            line-height: 1;
+            font-weight: 700;
+            white-space: nowrap;
         }
 
         .slider-wrap {
@@ -415,9 +492,25 @@
         }
 
         .control-card.room-created .time-pill {
-            background: rgba(52, 199, 89, 0.16);
-            border-color: rgba(52, 199, 89, 0.30);
+            --timer-color: var(--green);
+            background:
+                radial-gradient(circle at 20% 12%, rgba(255,255,255,0.22), transparent 36%),
+                linear-gradient(150deg, rgba(210, 255, 230, 0.20), rgba(255,255,255,0.065)),
+                rgba(52, 199, 89, 0.14);
+            border-color: rgba(52, 199, 89, 0.34);
             color: #e9fff0;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 0 24px rgba(52, 199, 89, 0.16);
+        }
+
+        .control-card.timer-waiting .time-pill {
+            --timer-color: var(--orange);
+            border-color: rgba(255, 159, 10, 0.36);
+        }
+
+        .control-card.timer-danger .time-pill {
+            --timer-color: var(--red);
+            border-color: rgba(255, 69, 58, 0.45);
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.30), 0 0 26px rgba(255,69,58,0.22);
         }
 
         input[type=range] {
@@ -639,8 +732,22 @@
             }
 
             .time-pill {
-                min-width: 82px;
-                padding: 9px 10px;
+                min-width: 108px;
+                padding: 7px 8px;
+                gap: 7px;
+            }
+
+            .timer-ring {
+                width: 48px;
+                height: 48px;
+            }
+
+            #sliderValueText {
+                font-size: 16px;
+            }
+
+            .timer-hint {
+                display: none;
             }
         }
     </style>
@@ -664,7 +771,7 @@
                         <span class="honorific">尊敬的</span>
                         <h1>{{UID}}</h1>
                     </div>
-                    <div class="mini-status">最长 600 秒</div>
+                    <div class="mini-status">最长 1200 秒</div>
                 </div>
 
                 <div class="metrics" id="financePanel">
@@ -682,18 +789,26 @@
                     <div class="card-head">
                         <div>
                             <div class="card-title" id="controlTitle">聊天室存活时间</div>
-                            <div class="card-caption" id="controlCaption">选择房间闲置销毁时间，上限 600 秒。</div>
+                            <div class="card-caption" id="controlCaption">选择房间闲置销毁时间，上限 1200 秒。</div>
                         </div>
-                        <div class="time-pill">
-                            <span id="sliderValueText">120</span><span class="slider-unit">s</span>
+                        <div class="time-pill" id="countdownWidget" title="创建后双击可重置倒计时">
+                            <div class="timer-ring">
+                                <div class="timer-core">
+                                    <span id="sliderValueText">330</span><span class="slider-unit">s</span>
+                                </div>
+                            </div>
+                            <div class="timer-copy">
+                                <span class="timer-state" id="timerStateText">存活时间</span>
+                                <span class="timer-hint" id="timerHintText">拖动选择</span>
+                            </div>
                         </div>
                     </div>
 
                     <div class="slider-wrap">
-                        <input type="range" id="safeTimeInput" min="30" max="600" step="10" value="120">
+                        <input type="range" id="safeTimeInput" min="30" max="1200" step="10" value="330">
                         <div class="bounds">
                             <span>30s</span>
-                            <span>600s</span>
+                            <span>1200s</span>
                         </div>
                     </div>
 
@@ -707,10 +822,16 @@
         let currentBalance = parseInt("{{BALANCE}}") || 0;
         const cost = parseInt("{{COST}}") || 0;
         const accessPath = "{{ACCESS_PATH}}" || "";
-        const MAX_SAFE_TIME = 600;
+        const MAX_SAFE_TIME = 1200;
+        const DEFAULT_SAFE_TIME = 330;
 
         let heartbeatInterval = null;
         let activeRoomUrl = "";
+        let activeRoomPwd = "";
+        let activeRoomSafeTime = DEFAULT_SAFE_TIME;
+        let lastCountdownTapAt = 0;
+        let keepAliveBusy = false;
+        let lastKeepAliveRequestAt = 0;
 
         const safeTimeInput = document.getElementById('safeTimeInput');
         const sliderValueText = document.getElementById('sliderValueText');
@@ -718,10 +839,13 @@
         const controlTitle = document.getElementById('controlTitle');
         const controlCaption = document.getElementById('controlCaption');
         const generateBtn = document.getElementById('generateBtn');
+        const countdownWidget = document.getElementById('countdownWidget');
+        const timerStateText = document.getElementById('timerStateText');
+        const timerHintText = document.getElementById('timerHintText');
 
         function clampSafeTime(value) {
             const parsed = parseInt(value, 10);
-            if (!Number.isFinite(parsed)) return 120;
+            if (!Number.isFinite(parsed)) return DEFAULT_SAFE_TIME;
             return Math.min(MAX_SAFE_TIME, Math.max(30, parsed));
         }
 
@@ -733,6 +857,9 @@
             const percentage = ((val - min) / (max - min)) * 100;
             sliderValueText.innerText = val;
             safeTimeInput.style.setProperty('--slider-fill', `${percentage}%`);
+            countdownWidget.style.setProperty('--timer-deg', `${(val / MAX_SAFE_TIME) * 360}deg`);
+            timerStateText.innerText = "存活时间";
+            timerHintText.innerText = "拖动选择";
         }
 
         safeTimeInput.addEventListener('input', updateSliderFill);
@@ -740,19 +867,46 @@
 
         function setRoomCreatedState(totalSeconds) {
             controlCard.classList.add('room-created');
+            controlCard.classList.remove('timer-danger', 'timer-waiting');
             controlTitle.innerText = "聊天室已建立";
             controlCaption.innerText = "链接仅保存在当前页面内存中，点击复制后发送给用户。";
-            sliderValueText.innerText = totalSeconds;
+            activeRoomSafeTime = totalSeconds;
+            renderCountdown(totalSeconds, totalSeconds, 'waiting', false);
             generateBtn.innerText = "再点一次复制";
         }
 
         function resetRoomCreateState() {
             activeRoomUrl = "";
+            activeRoomPwd = "";
             controlCard.classList.remove('room-created');
+            controlCard.classList.remove('timer-danger', 'timer-waiting');
             controlTitle.innerText = "聊天室存活时间";
-            controlCaption.innerText = "选择房间闲置销毁时间，上限 600 秒。";
+            controlCaption.innerText = "选择房间闲置销毁时间，上限 1200 秒。";
             generateBtn.innerText = "创建聊天室";
             updateSliderFill();
+        }
+
+        function renderCountdown(remaining, totalSeconds, status, timerStarted) {
+            const safeTotal = Math.max(1, totalSeconds || activeRoomSafeTime || DEFAULT_SAFE_TIME);
+            const safeRemaining = Math.max(0, Math.min(safeTotal, parseInt(remaining, 10) || 0));
+            const ratio = safeRemaining / safeTotal;
+
+            sliderValueText.innerText = safeRemaining;
+            countdownWidget.style.setProperty('--timer-deg', `${ratio * 360}deg`);
+
+            controlCard.classList.toggle('timer-waiting', status === 'waiting' || !timerStarted);
+            controlCard.classList.toggle('timer-danger', timerStarted && ratio <= 0.22);
+
+            if (status === 'closed') {
+                timerStateText.innerText = "已关闭";
+                timerHintText.innerText = "自动回收";
+            } else if (!timerStarted || status === 'waiting') {
+                timerStateText.innerText = "待接入";
+                timerHintText.innerText = "用户进入后计时";
+            } else {
+                timerStateText.innerText = ratio <= 0.22 ? "即将销毁" : "倒计时";
+                timerHintText.innerText = "双击保活";
+            }
         }
 
         function showToast(message, isError = false) {
@@ -827,6 +981,7 @@
                     }
 
                     activeRoomUrl = `${window.location.origin}/#${data.room_pwd}`;
+                    activeRoomPwd = data.room_pwd;
                     setRoomCreatedState(safeTime);
                     showToast("聊天室已创建，点击复制直连地址");
                     startServerHeartbeat(safeTime, data.room_pwd);
@@ -843,7 +998,8 @@
         }
 
         function startServerHeartbeat(totalSeconds, roomPwd) {
-            sliderValueText.innerText = totalSeconds;
+            activeRoomSafeTime = totalSeconds;
+            renderCountdown(totalSeconds, totalSeconds, 'waiting', false);
 
             if (heartbeatInterval) clearInterval(heartbeatInterval);
 
@@ -854,20 +1010,82 @@
 
                     if (statusData.status === 'closed' || statusData.remaining_time <= 0) {
                         clearInterval(heartbeatInterval);
-                        sliderValueText.innerText = "0";
+                        renderCountdown(0, totalSeconds, 'closed', true);
                         setTimeout(() => {
                             resetRoomCreateState();
                             showToast("安全通道已关闭并清理完毕");
                         }, 900);
                     } else {
                         const timeLeft = Math.min(totalSeconds, statusData.remaining_time);
-                        sliderValueText.innerText = timeLeft;
+                        renderCountdown(timeLeft, totalSeconds, statusData.status, statusData.timer_started);
+                        if (statusData.timer_started) {
+                            controlCaption.innerText = "房间正在计时，双击右侧倒计时控件可追加保活。";
+                        }
                     }
                 } catch (error) {
                     console.warn("探针网络闪断，等待重连恢复...");
                 }
             }, 1000);
         }
+
+        async function keepRoomAlive() {
+            if (!activeRoomPwd) return;
+            const now = Date.now();
+            if (keepAliveBusy || now - lastKeepAliveRequestAt < 700) return;
+            keepAliveBusy = true;
+            lastKeepAliveRequestAt = now;
+
+            try {
+                const response = await fetch('/api/room/keepalive', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        room_pwd: activeRoomPwd,
+                        access_path: accessPath
+                    })
+                });
+                const data = await response.json();
+
+                if (!response.ok) {
+                    showToast(data.detail || "保活鉴权失败", true);
+                    return;
+                }
+
+                if (data.status === 'active') {
+                    renderCountdown(activeRoomSafeTime, activeRoomSafeTime, 'active', true);
+                    showToast("倒计时已重置，房间已保活");
+                    return;
+                }
+
+                if (data.status === 'waiting') {
+                    showToast("首位用户进入后才开始倒计时");
+                    return;
+                }
+
+                showToast("房间已关闭，无法保活", true);
+            } catch (error) {
+                console.error(error);
+                showToast("保活请求失败，请稍后重试", true);
+            } finally {
+                keepAliveBusy = false;
+            }
+        }
+
+        countdownWidget.addEventListener('click', () => {
+            if (!activeRoomPwd) return;
+            const now = Date.now();
+            if (now - lastCountdownTapAt < 360) {
+                lastCountdownTapAt = 0;
+                keepRoomAlive();
+                return;
+            }
+            lastCountdownTapAt = now;
+        });
+
+        countdownWidget.addEventListener('dblclick', (event) => {
+            event.preventDefault();
+            if (activeRoomPwd) keepRoomAlive();
+        });
     </script>
 </body>
 </html>
