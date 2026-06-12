@@ -295,6 +295,22 @@
             margin-top: 24px;
         }
 
+        .control-card.room-created .slider-wrap {
+            display: none;
+        }
+
+        .control-card.room-created {
+            background:
+                linear-gradient(145deg, rgba(210, 255, 230, 0.22), rgba(255, 255, 255, 0.08)),
+                rgba(86, 150, 122, 0.24);
+        }
+
+        .control-card.room-created .time-pill {
+            background: rgba(52, 199, 89, 0.16);
+            border-color: rgba(52, 199, 89, 0.30);
+            color: #e9fff0;
+        }
+
         input[type=range] {
             -webkit-appearance: none;
             appearance: none;
@@ -361,8 +377,7 @@
             font-weight: 700;
         }
 
-        .btn-primary,
-        .btn-copy {
+        .btn-primary {
             position: relative;
             z-index: 1;
             width: 100%;
@@ -383,8 +398,7 @@
             box-shadow: 0 18px 36px rgba(90, 160, 255, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.42);
         }
 
-        .btn-primary:active,
-        .btn-copy:active {
+        .btn-primary:active {
             transform: scale(0.975);
         }
 
@@ -394,116 +408,10 @@
             cursor: wait;
         }
 
-        .result-panel {
-            display: none;
-            border-radius: var(--radius-xl);
-            padding: 18px;
-            animation: rise 0.38s cubic-bezier(0.2, 1, 0.2, 1) both;
-        }
-
-        @keyframes rise {
-            from { opacity: 0; transform: translateY(16px) scale(0.97); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
-        }
-
-        .result-grid {
-            position: relative;
-            z-index: 1;
-            display: grid;
-            grid-template-columns: 118px 1fr;
-            gap: 16px;
-            align-items: center;
-        }
-
-        .circular-timer {
-            position: relative;
-            width: 118px;
-            height: 118px;
-        }
-
-        .circular-timer svg {
-            width: 100%;
-            height: 100%;
-            transform: rotate(-90deg);
-            filter: drop-shadow(0 0 14px rgba(90, 200, 250, 0.28));
-        }
-
-        .timer-track,
-        .timer-progress {
-            cx: 59px;
-            cy: 59px;
-            r: 52px;
-            fill: transparent;
-            stroke-width: 7px;
-        }
-
-        .timer-track {
-            stroke: rgba(255, 255, 255, 0.12);
-        }
-
-        .timer-progress {
-            stroke: var(--blue);
-            stroke-linecap: round;
-            stroke-dasharray: 326.73;
-            stroke-dashoffset: 0;
-            transition: stroke-dashoffset 0.7s cubic-bezier(0.2, 1, 0.2, 1), stroke 0.35s ease;
-        }
-
-        .timer-text {
-            position: absolute;
-            inset: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .time-value {
-            font-family: ui-rounded, "SF Pro Rounded", ui-monospace, SFMono-Regular, Consolas, monospace;
-            font-size: 28px;
-            line-height: 1;
-            font-weight: 720;
-        }
-
-        .time-label {
-            margin-top: 5px;
-            color: var(--faint);
-            font-size: 11px;
-            font-weight: 700;
-        }
-
-        .result-copy {
-            min-width: 0;
-        }
-
-        .result-title {
-            font-size: 17px;
-            font-weight: 760;
-            letter-spacing: 0;
-        }
-
-        .result-note {
-            margin-top: 6px;
-            color: var(--muted);
-            font-size: 12px;
-            line-height: 1.45;
-        }
-
-        .btn-copy {
-            margin-top: 13px;
-            padding: 13px 14px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            background: rgba(255, 255, 255, 0.16);
-            border: 1px solid rgba(255, 255, 255, 0.18);
-            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
-        }
-
-        .btn-copy svg {
-            width: 17px;
-            height: 17px;
+        .control-card.room-created .btn-primary {
+            background: rgba(255, 255, 255, 0.17);
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.20), 0 16px 32px rgba(52, 199, 89, 0.16);
         }
 
         @media (max-height: 720px) {
@@ -526,8 +434,7 @@
             }
 
             .wallet,
-            .control-card,
-            .result-panel {
+            .control-card {
                 padding: 14px;
             }
 
@@ -572,50 +479,23 @@
         <section class="glass control-card">
             <div class="card-head">
                 <div>
-                    <div class="card-title">聊天室存活时间</div>
-                    <div class="card-caption">选择房间闲置销毁时间，上限 600 秒。</div>
+                    <div class="card-title" id="controlTitle">聊天室存活时间</div>
+                    <div class="card-caption" id="controlCaption">选择房间闲置销毁时间，上限 600 秒。</div>
                 </div>
                 <div class="time-pill">
-                    <span id="sliderValueText">180</span><span class="slider-unit">s</span>
+                    <span id="sliderValueText">120</span><span class="slider-unit">s</span>
                 </div>
             </div>
 
             <div class="slider-wrap">
-                <input type="range" id="safeTimeInput" min="30" max="600" step="10" value="180">
+                <input type="range" id="safeTimeInput" min="30" max="600" step="10" value="120">
                 <div class="bounds">
                     <span>30s</span>
                     <span>600s</span>
                 </div>
             </div>
 
-            <button class="btn-primary" id="generateBtn" onclick="generateRoom()">创建聊天室</button>
-        </section>
-
-        <section class="glass result-panel" id="resultPanel">
-            <div class="result-grid">
-                <div class="circular-timer">
-                    <svg>
-                        <circle class="timer-track"></circle>
-                        <circle class="timer-progress" id="progressRing"></circle>
-                    </svg>
-                    <div class="timer-text">
-                        <div class="time-value" id="countdownText">180</div>
-                        <div class="time-label">剩余秒数</div>
-                    </div>
-                </div>
-
-                <div class="result-copy">
-                    <div class="result-title">聊天室已建立</div>
-                    <div class="result-note">链接仅保存在当前页面内存中，点击复制后发送给用户。</div>
-                    <button class="btn-copy" id="copyUrlBtn" onclick="copyRoomUrl()">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <rect x="9" y="9" width="13" height="13" rx="2"></rect>
-                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                        </svg>
-                        复制直连地址
-                    </button>
-                </div>
-            </div>
+            <button class="btn-primary" id="generateBtn" onclick="handlePrimaryAction()">创建聊天室</button>
         </section>
     </main>
 
@@ -628,13 +508,16 @@
         let heartbeatInterval = null;
         let activeRoomUrl = "";
 
-        const CIRCUMFERENCE = 326.73;
         const safeTimeInput = document.getElementById('safeTimeInput');
         const sliderValueText = document.getElementById('sliderValueText');
+        const controlCard = document.querySelector('.control-card');
+        const controlTitle = document.getElementById('controlTitle');
+        const controlCaption = document.getElementById('controlCaption');
+        const generateBtn = document.getElementById('generateBtn');
 
         function clampSafeTime(value) {
             const parsed = parseInt(value, 10);
-            if (!Number.isFinite(parsed)) return 180;
+            if (!Number.isFinite(parsed)) return 120;
             return Math.min(MAX_SAFE_TIME, Math.max(30, parsed));
         }
 
@@ -650,6 +533,23 @@
 
         safeTimeInput.addEventListener('input', updateSliderFill);
         updateSliderFill();
+
+        function setRoomCreatedState(totalSeconds) {
+            controlCard.classList.add('room-created');
+            controlTitle.innerText = "聊天室已建立";
+            controlCaption.innerText = "链接仅保存在当前页面内存中，点击复制后发送给用户。";
+            sliderValueText.innerText = totalSeconds;
+            generateBtn.innerText = "复制聊天地址";
+        }
+
+        function resetRoomCreateState() {
+            activeRoomUrl = "";
+            controlCard.classList.remove('room-created');
+            controlTitle.innerText = "聊天室存活时间";
+            controlCaption.innerText = "选择房间闲置销毁时间，上限 600 秒。";
+            generateBtn.innerText = "创建聊天室";
+            updateSliderFill();
+        }
 
         function showToast(message, isError = false) {
             const toast = document.getElementById('toast');
@@ -678,20 +578,24 @@
             }
         }
 
+        async function handlePrimaryAction() {
+            if (activeRoomUrl) {
+                await copyRoomUrl();
+                return;
+            }
+            await generateRoom();
+        }
+
         async function generateRoom() {
             const safeTime = clampSafeTime(document.getElementById('safeTimeInput').value);
-            const btn = document.getElementById('generateBtn');
-            const resultPanel = document.getElementById('resultPanel');
 
             if (currentBalance < cost) {
                 showToast("配额不足，请联系系统管理员", true);
                 return;
             }
 
-            btn.disabled = true;
-            btn.innerText = "正在创建...";
-            resultPanel.style.opacity = '1';
-            resultPanel.style.transform = 'translateY(0) scale(1)';
+            generateBtn.disabled = true;
+            generateBtn.innerText = "正在创建...";
 
             try {
                 const response = await fetch('/api/admin/generate_room', {
@@ -719,7 +623,7 @@
                     }
 
                     activeRoomUrl = `${window.location.origin}/#${data.room_pwd}`;
-                    resultPanel.style.display = 'block';
+                    setRoomCreatedState(safeTime);
                     showToast("聊天室已创建，点击复制直连地址");
                     startServerHeartbeat(safeTime, data.room_pwd);
                 } else {
@@ -729,20 +633,13 @@
                 console.error(error);
                 showToast("连接服务器超时，请稍后重试", true);
             } finally {
-                btn.disabled = false;
-                btn.innerText = "创建聊天室";
+                generateBtn.disabled = false;
+                if (!activeRoomUrl) generateBtn.innerText = "创建聊天室";
             }
         }
 
         function startServerHeartbeat(totalSeconds, roomPwd) {
-            const textElem = document.getElementById('countdownText');
-            const progressRing = document.getElementById('progressRing');
-            const resultPanel = document.getElementById('resultPanel');
-
-            textElem.innerText = totalSeconds;
-            progressRing.style.strokeDashoffset = '0';
-            progressRing.style.stroke = 'var(--blue)';
-            resultPanel.style.display = 'block';
+            sliderValueText.innerText = totalSeconds;
 
             if (heartbeatInterval) clearInterval(heartbeatInterval);
 
@@ -753,38 +650,14 @@
 
                     if (statusData.status === 'closed' || statusData.remaining_time <= 0) {
                         clearInterval(heartbeatInterval);
-                        textElem.innerText = "0";
-                        progressRing.style.strokeDashoffset = CIRCUMFERENCE;
-                        progressRing.style.stroke = 'rgba(255, 255, 255, 0.18)';
-                        activeRoomUrl = "";
-
+                        sliderValueText.innerText = "0";
                         setTimeout(() => {
-                            resultPanel.style.transition = 'all 0.5s cubic-bezier(0.2, 1, 0.2, 1)';
-                            resultPanel.style.opacity = '0';
-                            resultPanel.style.transform = 'translateY(12px) scale(0.96)';
-
-                            setTimeout(() => {
-                                resultPanel.style.display = 'none';
-                                resultPanel.style.opacity = '1';
-                                resultPanel.style.transform = 'translateY(0) scale(1)';
-                                showToast("安全通道已关闭并清理完毕");
-                            }, 520);
+                            resetRoomCreateState();
+                            showToast("安全通道已关闭并清理完毕");
                         }, 900);
                     } else {
                         const timeLeft = Math.min(totalSeconds, statusData.remaining_time);
-                        textElem.innerText = timeLeft;
-
-                        const percentage = timeLeft / totalSeconds;
-                        const validPercentage = Math.min(Math.max(percentage, 0), 1);
-                        progressRing.style.strokeDashoffset = CIRCUMFERENCE - (validPercentage * CIRCUMFERENCE);
-
-                        if (validPercentage > 0.5) {
-                            progressRing.style.stroke = 'var(--blue)';
-                        } else if (validPercentage <= 0.2) {
-                            progressRing.style.stroke = 'var(--red)';
-                        } else {
-                            progressRing.style.stroke = 'var(--orange)';
-                        }
+                        sliderValueText.innerText = timeLeft;
                     }
                 } catch (error) {
                     console.warn("探针网络闪断，等待重连恢复...");
