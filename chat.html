@@ -131,22 +131,22 @@
 
         /* 顶部栏 - 高度弹性 */
         header { 
-            height: clamp(64px, 9vh, 76px); 
-            padding: 0 18px; 
+            height: clamp(58px, 7.8vh, 68px); 
+            padding: 0 16px; 
             display: flex; 
             align-items: center; 
             justify-content: space-between; 
-            gap: 14px;
+            gap: 10px;
             background:
-                radial-gradient(circle at 18% 0%, rgba(255,255,255,0.20), transparent 32%),
-                linear-gradient(180deg, rgba(255,255,255,0.13), rgba(255,255,255,0.028)),
-                rgba(8, 12, 22, 0.32);
-            backdrop-filter: blur(18px) saturate(220%) brightness(1.10);
-            -webkit-backdrop-filter: blur(18px) saturate(220%) brightness(1.10);
-            border-bottom: 1px solid rgba(255,255,255,0.12); 
+                radial-gradient(circle at 18% 0%, rgba(255,255,255,0.16), transparent 30%),
+                linear-gradient(180deg, rgba(255,255,255,0.105), rgba(255,255,255,0.022)),
+                rgba(8, 12, 22, 0.24);
+            backdrop-filter: blur(16px) saturate(220%) brightness(1.08);
+            -webkit-backdrop-filter: blur(16px) saturate(220%) brightness(1.08);
+            border-bottom: 1px solid rgba(255,255,255,0.105); 
             padding-top: env(safe-area-inset-top);
             flex-shrink: 0;
-            box-shadow: 0 18px 46px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.20);
+            box-shadow: 0 14px 34px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.18);
         }
         header > div:first-child {
             min-width: 0;
@@ -164,11 +164,11 @@
         }
         
         h1 {
-            font-size: clamp(18px, 4.8vw, 21px); 
+            font-size: clamp(17px, 3.4vw, 20px); 
             margin: 0;
             color: #fff;
-            text-shadow: 0 1px 20px rgba(100, 216, 255, 0.22);
-            font-weight: 760; letter-spacing: 0;
+            text-shadow: 0 1px 16px rgba(100, 216, 255, 0.20);
+            font-weight: 760; letter-spacing: 0.01em;
             /* 防溢出 */
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
         }
@@ -179,9 +179,9 @@
             #t-clean { display: none; }
         }
 
-        .badge { display: inline-flex; align-items: center; gap: 7px; font-size: 11px; color: rgba(232,242,255,0.76); margin-top: 6px; background: linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0.035)), rgba(255,255,255,0.018); padding: 4px 10px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.24); min-height: 24px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.34), inset 0 -1px 0 rgba(255,255,255,0.08), 0 8px 24px rgba(0,0,0,0.14); max-width: min(64vw, 430px); backdrop-filter: blur(10px) saturate(210%) brightness(1.08); -webkit-backdrop-filter: blur(10px) saturate(210%) brightness(1.08); }
+        .badge { display: inline-flex; align-items: center; gap: 6px; font-size: 10.5px; color: rgba(232,242,255,0.72); margin-top: 4px; background: linear-gradient(180deg, rgba(255,255,255,0.16), rgba(255,255,255,0.030)), rgba(255,255,255,0.014); padding: 3px 9px; border-radius: 999px; border: 1px solid rgba(255,255,255,0.22); min-height: 22px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.30), inset 0 -1px 0 rgba(255,255,255,0.06), 0 7px 18px rgba(0,0,0,0.12); max-width: min(62vw, 410px); backdrop-filter: blur(9px) saturate(210%) brightness(1.08); -webkit-backdrop-filter: blur(9px) saturate(210%) brightness(1.08); }
         #hint { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--danger); box-shadow: 0 0 0 4px rgba(255,90,99,0.10), 0 0 12px var(--danger); transition: 0.3s; flex-shrink: 0; }
+        .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--danger); box-shadow: 0 0 0 3px rgba(255,90,99,0.10), 0 0 10px var(--danger); transition: 0.3s; flex-shrink: 0; }
         .dot.on { background: var(--green); box-shadow: 0 0 0 4px rgba(54, 211, 153, 0.14), 0 0 18px rgba(54, 211, 153, 0.8); }
 
         .btn { 
@@ -609,12 +609,13 @@
                 --btn-size: clamp(36px, 9.7vw, 42px);
                 --font-base: clamp(14px, 3.85vw, 15px);
             }
-            header { height: clamp(78px, 13vh, 112px); padding-left: 14px; padding-right: 14px; align-items: center; }
-            h1 { font-size: clamp(23px, 7vw, 28px); letter-spacing: -0.01em; }
-            .badge { max-width: 68vw; padding: 5px 11px; font-size: 12px; background: rgba(255,255,255,0.066); }
-            .btn { width: 48px; height: 48px; padding: 0; justify-content: center; border-radius: 50%; background: radial-gradient(circle at 28% 12%, rgba(255,255,255,0.26), transparent 36%), linear-gradient(180deg, rgba(255,255,255,0.13), rgba(255,255,255,0.035)), rgba(255,255,255,0.035); }
+            header { height: clamp(74px, 10.5vh, 90px); padding-left: 12px; padding-right: 12px; align-items: center; gap: 9px; }
+            h1 { font-size: clamp(19px, 5.3vw, 22px); letter-spacing: 0; line-height: 1.1; }
+            .badge { max-width: calc(100vw - 106px); padding: 4px 10px; min-height: 24px; font-size: 11px; margin-top: 5px; background: rgba(255,255,255,0.056); }
+            .btn { width: 40px; height: 40px; min-width: 40px; padding: 0; justify-content: center; border-radius: 50%; background: radial-gradient(circle at 28% 12%, rgba(255,255,255,0.23), transparent 36%), linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.032)), rgba(255,255,255,0.030); box-shadow: inset 0 1px 0 rgba(255,255,255,0.32), inset 0 -1px 0 rgba(255,255,255,0.06), 0 9px 22px rgba(0,0,0,0.18); }
+            .btn svg { width: 16px; height: 16px; }
             #t-clean { display: none; }
-            #chat { padding: 16px 12px 18px; gap: 13px; }
+            #chat { padding: 13px 12px 18px; gap: 13px; }
             #input-box { padding-left: 10px; padding-right: 10px; }
             #bar { border-radius: 28px; padding: 8px; gap: 7px; }
             #txt { padding-left: 11px; padding-right: 11px; border-radius: 18px; }
