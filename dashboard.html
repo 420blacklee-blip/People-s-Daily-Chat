@@ -208,6 +208,7 @@
             display: flex;
             flex-direction: column;
             flex-shrink: 0; 
+            max-height: clamp(124px, 26vh, 220px);
             z-index: 10;
             position: relative;
         }
@@ -235,7 +236,25 @@
             margin-bottom: 8px; display: flex; align-items: center; gap: 6px; text-shadow: 0 0 8px rgba(50,212,255,0.4);
         }
         .temp-room-list {
-            display: flex; gap: 10px; flex-wrap: wrap;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-content: flex-start;
+            max-height: clamp(76px, 18vh, 154px);
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding-right: 6px;
+            overscroll-behavior: contain;
+            scrollbar-gutter: stable;
+        }
+        .temp-room-list::-webkit-scrollbar { width: 4px; }
+        .temp-room-list::-webkit-scrollbar-thumb {
+            background: rgba(50, 212, 255, 0.28);
+            border-radius: 999px;
+        }
+        .temp-room-list::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.035);
+            border-radius: 999px;
         }
 
         /* === Lv2 闲置秒表 卡片 === */
