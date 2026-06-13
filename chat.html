@@ -703,14 +703,14 @@
             <div id="room-life" class="room-life room-waiting">
                 <div class="life-main">
                     <span id="dot" class="dot" aria-hidden="true"></span>
-                    <span id="life-state">离房间关闭还剩</span>
-                    <span id="life-time"><span id="life-time-value">--秒</span></span>
+                    <span id="life-state"></span>
+                    <span id="life-time"><span id="life-time-value">--</span></span>
                 </div>
             </div>
         </div>
         <button id="b-clean" class="btn">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
-            <span id="t-clean">重置聊天ID</span>
+            <span id="t-clean"></span>
         </button>
     </header>
 
@@ -735,13 +735,13 @@
             <textarea id="txt" rows="1"></textarea>
             <button id="send"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
             <div id="voice-panel">
-                <button class="voice-action" id="voice-cancel" title="撤销录音"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+                <button class="voice-action" id="voice-cancel" title=""><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
                 <div class="voice-live">
                     <span id="voice-status"></span>
                     <div class="voice-wave" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
                     <span id="voice-clock">00:00 / 00:30</span>
                 </div>
-                <button class="voice-action" id="voice-confirm" title="发送录音"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
+                <button class="voice-action" id="voice-confirm" title=""><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
             </div>
         </div>
     </div>
@@ -863,8 +863,8 @@
     }
     /* === 结束 探针逻辑 === */
 
-    const DOC_TITLE = "Welcome to the squad！";
-    const PAGE_HEADING = "加密通讯";
+    const DOC_TITLE = "Welcome to the squad!";
+    let PAGE_HEADING = "";
     const $ = i => document.getElementById(i);
     const mk = (t,c,h,safe) => {
         let e=document.createElement(t);
@@ -884,10 +884,11 @@
     const VOICE_PAUSE_ICON = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg>`;
 
     const T = {
-        zh: { w1:"⚡ 采用 <strong style='color:#66b3ff'>AES-GCM E2EE</strong> 端到端加密", w2:"语音、图片与文字均在浏览器端加密", pre:"当前房间: ", clean:"重置聊天ID", rec:"等待重新链接...", pt:"发送语音", et:"发送图片", ph:"发送加密消息...", mtk:"进入房间", mdk:"房间与房间隔离<br>同房间下可聊天", mtkp:"房间名称...", can:"取消", sav:"应用", ku:"密钥已更新", ne:"上传中断：处理超时 (3s)", nc:"未连接", comp:"图片处理中...", big:"图片过大无法压缩", onl:"一次最多12张", wait:"等待网络: ", reset_wait:"ID重置冷却中，还需 ", reset_done:"ID已重置，正在以新身份重新进入房间。", reset_failed:"ID重置失败，请稍后再试。", reset_busy:"正在重置ID，请稍候。", ban: "🚫 您的IP已被封禁", vuns:"当前浏览器不支持语音录制，请更换新版 Chrome / Firefox / Safari。", vden:"麦克风权限被拒绝，无法录音。", vbig:"语音过大，请重录。", vrec:"正在录音，最多30秒", vrecShort:"录音中", vready:"待发送", vproc:"语音处理中..." },
-        en: { w1:"⚡ Using <strong style='color:#66b3ff'>AES-GCM E2EE</strong> Encryption", w2:"Voice, images and text are encrypted in your browser", pre:"current room: ", clean:"Reset ID", rec:"reconnection...", pt:"Record voice", et:"Send Image", ph:"Type encrypted message...", mtk:"Create a room", mdk:"Unable to communicate between different rooms", mtkp:"Room name...", can:"Cancel", sav:"Apply", ku:"Key Updated", ne:"Aborted: Timeout (3s)", nc:"Not Connected", comp:"Processing...", big:"Image too large", onl:"Max 12 images", wait:"Waiting: ", reset_wait:"ID reset is cooling down. Time left: ", reset_done:"ID reset. Rejoining with a new identity.", reset_failed:"ID reset failed. Please try again.", reset_busy:"Resetting ID. Please wait.", ban: "🚫 You are BANNED", vuns:"Voice recording is not supported in this browser. Please use a recent Chrome / Firefox / Safari.", vden:"Microphone permission was denied.", vbig:"Voice file is too large. Please record again.", vrec:"Recording, max 30 seconds", vrecShort:"Recording", vready:"Ready", vproc:"Processing voice..." }
+        zh: { heading:"加密通讯", w1:"⚡ 采用 <strong style='color:#66b3ff'>AES-GCM E2EE</strong> 端到端加密", w2:"语音、图片与文字均在浏览器端加密", pre:"当前房间: ", life:"离房间关闭还剩", sec:"秒", clean:"重置聊天ID", rec:"等待重新链接...", pt:"发送语音", et:"发送图片", ph:"发送加密消息...", mtk:"进入房间", mdk:"房间与房间隔离<br>同房间下可聊天", mtkp:"房间名称...", can:"取消", sav:"应用", ku:"密钥已更新", ne:"上传中断：处理超时 (3s)", nc:"未连接", comp:"图片处理中...", big:"图片过大无法压缩", img_complex:"图片过于复杂，无法压缩至 1MB 以内，请换一张图片！", onl:"一次最多12张", wait:"等待网络: ", reset_wait:"ID重置冷却中，还需 ", reset_done:"ID已重置，正在以新身份重新进入房间。", reset_failed:"ID重置失败，请稍后再试。", reset_busy:"正在重置ID，请稍候。", ban: "🚫 您的IP已被封禁", server_error:"连接被服务器拒绝", vuns:"当前浏览器不支持语音录制，请更换新版 Chrome / Firefox / Safari。", vden:"麦克风权限被拒绝，无法录音。", vbig:"语音过大，请重录。", vrec:"正在录音，最多30秒", vrecShort:"录音中", vready:"待发送", vproc:"语音处理中...", voice_cancel:"撤销录音", voice_send:"发送录音", image:"图片", audio:"语音", raw_image:"[图片]", raw_audio:"[语音]", security_id:"🚫 [安全警报] 身份ID不匹配！", security_time:"🚫 [安全警报] 时间戳异常！", security_sig:"🚫 [安全警报] 签名验证失败！", payload_sig:"签名验证失败" },
+        en: { heading:"Encrypted Chat", w1:"⚡ Using <strong style='color:#66b3ff'>AES-GCM E2EE</strong> encryption", w2:"Voice, images and text are encrypted in your browser", pre:"Current room: ", life:"Room closes in", sec:"s", clean:"Reset ID", rec:"Reconnecting...", pt:"Record voice", et:"Send image", ph:"Type encrypted message...", mtk:"Enter room", mdk:"Rooms are isolated<br>Only users in the same room can chat", mtkp:"Room name...", can:"Cancel", sav:"Apply", ku:"Key updated", ne:"Upload aborted: timeout (3s)", nc:"Not connected", comp:"Processing image...", big:"Image is too large", img_complex:"This image is too complex to compress under 1 MB. Please choose another image.", onl:"Up to 12 images at a time", wait:"Waiting for network: ", reset_wait:"ID reset is cooling down. Time left: ", reset_done:"ID reset. Rejoining with a new identity.", reset_failed:"ID reset failed. Please try again later.", reset_busy:"Resetting ID. Please wait.", ban: "🚫 Your IP has been banned", server_error:"Connection rejected by server", vuns:"Voice recording is not supported in this browser. Please use a recent Chrome / Firefox / Safari.", vden:"Microphone permission was denied.", vbig:"Voice file is too large. Please record again.", vrec:"Recording, max 30 seconds", vrecShort:"Recording", vready:"Ready to send", vproc:"Processing voice...", voice_cancel:"Cancel recording", voice_send:"Send recording", image:"image", audio:"voice", raw_image:"[image]", raw_audio:"[voice]", security_id:"🚫 [Security alert] Identity ID mismatch!", security_time:"🚫 [Security alert] Timestamp mismatch!", security_sig:"🚫 [Security alert] Signature verification failed!", payload_sig:"signature verification failed" }
     };
     const L = T[navigator.language.startsWith('zh')?'zh':'en'];
+    PAGE_HEADING = L.heading;
     const ID_RESET_COOLDOWN_MS = 24 * 60 * 60 * 1000;
     const MAX_IMAGE_BATCH = 12;
     const IMAGE_SEND_INTERVAL_MS = 340;
@@ -1098,13 +1099,13 @@
                     const calcId = buf2base64Id(hashBytes);
 
                     if (calcId !== msgUid || senderIdInternal !== msgUid) {
-                        finalBody = "🚫 [安全警报] 身份ID不匹配！";
+                        finalBody = L.security_id;
                     } else if (senderTsInternal !== msgTs) {
-                        finalBody = "🚫 [安全警报] 时间戳异常！";
+                        finalBody = L.security_time;
                     } else {
                         const verifyData = msgNonce + senderTsInternal + senderIdInternal + senderMsg;
                         const isValid = await verifySignature(verifyData, senderSig, senderPub);
-                        finalBody = isValid ? senderMsg : "🚫 [安全警报] 签名验证失败！";
+                        finalBody = isValid ? senderMsg : L.security_sig;
                     }
                 }
             } catch(e) { }
@@ -1138,14 +1139,14 @@
             );
 
             const payloadType = header.type === "audio" ? "audio" : "image";
-            const payloadLabel = payloadType === "audio" ? "语音" : "图片";
+            const payloadLabel = payloadType === "audio" ? L.audio : L.image;
             const payloadHashBuf = await window.crypto.subtle.digest('SHA-256', decryptedBody);
             const payloadHashHex = buf2hex(payloadHashBuf);
 
             const verifyData = header.n + header.t + header.u + payloadHashHex;
             const isValid = await verifySignature(verifyData, header.s, header.k);
 
-            if (!isValid) return { uid: header.u, text: null, nonce: header.n, error: `⚠️ ${payloadLabel}签名验证失败` };
+            if (!isValid) return { uid: header.u, text: null, nonce: header.n, error: `⚠️ ${payloadLabel} ${L.payload_sig}` };
 
             const blob = new Blob([decryptedBody], {type: header.mime || (payloadType === "audio" ? "audio/webm" : "image/webp")});
             const blobUrl = URL.createObjectURL(blob);
@@ -1273,11 +1274,11 @@
 
     function formatLifeTime(seconds) {
         const safe = Math.max(0, parseInt(seconds, 10) || 0);
-        return `${safe}秒`;
+        return `${safe}${L.sec}`;
     }
 
     function setRoomLabel(pwd) {
-        UI.lifeState.textContent = '离房间关闭还剩';
+        UI.lifeState.textContent = L.life;
     }
 
     function setLifeColor(ratio, status, timerStarted) {
@@ -1326,7 +1327,7 @@
         UI.life.classList.toggle('room-closed', status === 'closed');
         UI.lifeTimeValue.textContent = formatLifeTime(remaining);
 
-        UI.lifeState.textContent = '离房间关闭还剩';
+        UI.lifeState.textContent = L.life;
     }
 
     function startRoomLifeProbe() {
@@ -1349,7 +1350,7 @@
                 }
             } catch (error) {
                 if (token !== roomLifeToken) return;
-                UI.lifeState.textContent = '离房间关闭还剩';
+                UI.lifeState.textContent = L.life;
             }
         };
 
@@ -1425,7 +1426,10 @@
     $('t-clean').innerText = L.clean;
     $('t-rec').innerText = L.rec;
     $('b-pwd').title = L.pt; $('b-img').title = L.et; UI.txt.placeholder = L.ph;
+    $('voice-cancel').title = L.voice_cancel; $('voice-confirm').title = L.voice_send;
     $('m-can').innerText = L.can; $('m-sav').innerText = L.sav;
+    UI.lifeState.textContent = L.life;
+    UI.lifeTimeValue.textContent = `--${L.sec}`;
     if(curPwd) setRoomLabel(curPwd);
 
     const getHash = s => {
@@ -1551,7 +1555,7 @@
                 let mask = mk('div', 'img-mask', '⏳');
                 bubble.appendChild(mask);
             }
-            bubble.dataset.raw = '[图片]';
+            bubble.dataset.raw = L.raw_image;
         } else if (isAudio) {
             bubble.className = 'bubble audio-msg';
             let player = mk('div', 'voice-player');
@@ -1575,7 +1579,7 @@
             bubble.appendChild(player);
             bindVoicePlayer(player, audio, duration);
             if (isPending) bubble.id = 'bub-' + nonce;
-            bubble.dataset.raw = '[语音]';
+            bubble.dataset.raw = L.raw_audio;
         } else {
             // E2EE 文本内容安全渲染
             if (repHtml) {
@@ -1731,7 +1735,8 @@
             
             if (d.startsWith("SYS_ERR:")) {
                 let errMsg = d.split(":")[1];
-                $('t-rec').innerText = errMsg;
+                const displayErr = navigator.language.startsWith('zh') ? errMsg : (errMsg.toLowerCase().includes("ban") ? L.ban : L.server_error);
+                $('t-rec').innerText = displayErr;
                 UI.alert.style.display = 'flex';
                 if (errMsg.toLowerCase().includes("ban") || errMsg.includes("封禁")) {
                     isFatalError = true;
@@ -2243,7 +2248,7 @@
             }
 
             if (!blob || blob.size > MAX_BLOB_SIZE) {
-                alert("图片过于复杂，无法压缩至 1MB 以内，请换一张图片！");
+                alert(L.img_complex);
                 let bub = document.getElementById('bub-' + task.nonce);
                 if (bub && bub.parentNode) bub.parentNode.parentNode.removeChild(bub.parentNode);
                 URL.revokeObjectURL(task.blobUrl);
@@ -2282,7 +2287,7 @@
 
         // 最终防御：加密头加进来后仍然超 1MB，清气泡
         if (packet.byteLength > 1024 * 1024) {
-            alert("图片过于复杂，无法压缩至 1MB 以内，请换一张图片！");
+            alert(L.img_complex);
             let bub = document.getElementById('bub-' + task.nonce);
             if (bub && bub.parentNode) bub.parentNode.parentNode.removeChild(bub.parentNode);
             URL.revokeObjectURL(task.blobUrl);
