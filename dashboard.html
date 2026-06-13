@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="utf-8">
-    <title>态势感知控制台</title>
+    <title>Situational Awareness Console</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <script src="/static/chart.js"></script>
     <style>
@@ -375,9 +375,9 @@
 <div id="login-overlay">
     <div class="login-card">
         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--text-main)" stroke-width="1.5" style="opacity:0.8"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-        <h2 class="login-title">内核认证</h2>
-        <input type="password" id="pass-in" class="login-input" placeholder="请输入密钥" onkeydown="if(event.key==='Enter') startLogin()">
-        <button class="btn-mac login-btn" onclick="startLogin()">解锁</button>
+        <h2 class="login-title" id="login-title"></h2>
+        <input type="password" id="pass-in" class="login-input" placeholder="" onkeydown="if(event.key==='Enter') startLogin()">
+        <button class="btn-mac login-btn" id="login-btn" onclick="startLogin()"></button>
     </div>
 </div>
 
@@ -389,36 +389,36 @@
             <span style="background:var(--mac-max)"></span>
         </div>
         <div class="title-bar">
-            <h1>态势感知引擎 · V6</h1>
+            <h1 id="dashboard-title"></h1>
             <div class="pulse-box"><canvas id="pulseChart"></canvas></div>
         </div>
         <div class="header-stats">
-            <div class="stat-bit"><label>节点</label><b id="v-ips">0</b></div>
-            <div class="stat-bit"><label>会话</label><b id="v-users">0</b></div>
+            <div class="stat-bit"><label id="stat-nodes"></label><b id="v-ips">0</b></div>
+            <div class="stat-bit"><label id="stat-sessions"></label><b id="v-users">0</b></div>
             
             <div style="width:1px; height:16px; background:rgba(255,255,255,0.1); margin:0 2px;"></div>
             
-            <button class="btn-mac" id="btn-lock" onclick="setLockMode(true)" title="锁定:仅允许已登记的临时通道接入">🔒 上锁</button>
-            <button class="btn-mac" id="btn-unlock" onclick="setLockMode(false)" title="解锁:允许未知房间接入">🔓 解锁</button>
+            <button class="btn-mac" id="btn-lock" onclick="setLockMode(true)" title=""></button>
+            <button class="btn-mac" id="btn-unlock" onclick="setLockMode(false)" title=""></button>
             
-            <div class="time-input-wrap" title="临时通道闲置销毁时间(秒)">
+            <div class="time-input-wrap" title="">
                 <input type="number" id="in-safe-time" value="180" min="10" max="86400">
-                <span>秒</span>
+                <span id="safe-time-unit"></span>
             </div>
-            <button class="btn-mac" style="color:var(--cyan)" onclick="generateTempRoom(this)" title="生成限时随机通道">⚡ 新建房间</button>
+            <button class="btn-mac" style="color:var(--cyan)" onclick="generateTempRoom(this)" title=""></button>
             
-            <button class="btn-mac" style="color:var(--purple); margin-left: 6px;" onclick="triggerSpaceJump()" title="全员强制转移至随机新房间">🌀 全体转移</button>
+            <button class="btn-mac" style="color:var(--purple); margin-left: 6px;" onclick="triggerSpaceJump()" title=""></button>
             
-            <button class="btn-mac btn-danger" id="btn-halt" style="margin-left: 6px;" onclick="shutdownServer()" title="紧急暂停:清退全员并封锁外部接入">紧急暂停</button>
+            <button class="btn-mac btn-danger" id="btn-halt" style="margin-left: 6px;" onclick="shutdownServer()" title=""></button>
         </div>
     </header>
 
     <main>
         <div id="temp-rooms-panel">
-            <div class="temp-diag" id="temp-diag" title="后端返回的临时房间数 / 客户端与服务端时钟偏移 / 上次拉取时间">通道 <b id="diag-count">-</b> · 偏移 <b id="diag-skew">-</b>ms · 拉取 <b id="diag-tick">-</b></div>
+            <div class="temp-diag" id="temp-diag" title=""><b id="diag-count">-</b> · <b id="diag-skew">-</b>ms · <b id="diag-tick">-</b></div>
             <div class="temp-room-header">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                活跃临时通道
+                <span id="temp-room-title"></span>
             </div>
             <div class="temp-room-list" id="temp-room-list">
                 </div>
@@ -430,13 +430,13 @@
                     <col style="width: 250px;"> <col style="width: 100px;"> <col style="width: 120px;"> <col style="width: auto;">  <col style="width: 90px;">  <col style="width: 90px;">  <col style="width: 150px;"> </colgroup>
                 <thead>
                     <tr>
-                        <th>终端层级</th>
-                        <th>会话</th>
-                        <th>房间</th>
-                        <th>态势感知</th>
-                        <th style="text-align:right">在线时长</th>
-                        <th style="text-align:center">状态</th>
-                        <th style="text-align:right">控制</th>
+                        <th id="th-terminal"></th>
+                        <th id="th-session"></th>
+                        <th id="th-room"></th>
+                        <th id="th-probe"></th>
+                        <th id="th-online" style="text-align:right"></th>
+                        <th id="th-status" style="text-align:center"></th>
+                        <th id="th-control" style="text-align:right"></th>
                     </tr>
                 </thead>
                 <tbody id="table-body"></tbody>
@@ -447,6 +447,185 @@
 
 <script>
     const $ = id => document.getElementById(id);
+    const DICT = {
+        zh: {
+            title: "态势感知控制台",
+            loginTitle: "内核认证",
+            passPlaceholder: "请输入密钥",
+            unlock: "解锁",
+            dashboardTitle: "态势感知引擎 · V6",
+            nodes: "节点",
+            sessions: "会话",
+            lock: "🔒 上锁",
+            unlockMode: "🔓 解锁",
+            lockTitle: "锁定:仅允许已登记的临时通道接入",
+            unlockTitle: "解锁:允许未知房间接入",
+            seconds: "秒",
+            safeTimeTitle: "临时通道闲置销毁时间(秒)",
+            newRoom: "⚡ 新建房间",
+            newRoomTitle: "生成限时随机通道",
+            migrateAll: "🌀 全体转移",
+            migrateAllTitle: "全员强制转移至随机新房间",
+            halt: "紧急暂停",
+            resume: "🟢 恢复运行",
+            haltTitle: "紧急暂停:清退全员并封锁外部接入",
+            resumeTitle: "解除紧急暂停,恢复外部接入",
+            diagTitle: "后端返回的临时房间数 / 客户端与服务端时钟偏移 / 上次拉取时间",
+            diag: "通道",
+            skew: "偏移",
+            pulled: "拉取",
+            tempRooms: "活跃临时通道",
+            thTerminal: "终端层级",
+            thSession: "会话",
+            thRoom: "房间",
+            thProbe: "态势感知",
+            thOnline: "在线时长",
+            thStatus: "状态",
+            thControl: "控制",
+            system: "系统",
+            browser: "浏览器",
+            hardware: "硬件",
+            core: "核",
+            fingerprint: "指纹",
+            waitingProbe: "等待态势数据…",
+            copyRoomTitle: "点击复制通道链接",
+            idle: "闲置",
+            copiedRoomLink: room => `🔗 已复制通道链接:${room}`,
+            noTempRooms: "暂无活跃临时通道(创建后将在此显示闲置秒表)",
+            secSuffix: "秒",
+            bannedId: "已封ID",
+            online: "在线",
+            active: "活跃",
+            unban: "解封",
+            ban: "封禁",
+            banIp: "封IP",
+            folded: "[ 已折叠 ]",
+            bannedIp: "已封IP",
+            clean: "干净",
+            unIp: "解IP",
+            node: "节点",
+            unId: "解ID",
+            banId: "封ID",
+            lockedToast: "🔒 已上锁:执行 IFRAME 伪装清退未授权连接",
+            unlockedToast: "🔓 解除拦截:允许未知房间接入",
+            copiedRoom: (room, seconds) => `🔗 已复制通道:${room} [闲置上限 ${seconds} 秒]`,
+            copied: "✔ 已复制",
+            migrateConfirm: "⚠️ 警告：是否启动全体转移？\n\n此操作将强行把当前所有在线用户转移至一个全新的随机房间，旧通道将被彻底抛弃和抹除。",
+            migrateOk: (count, room, seconds) => `🌀 跃迁成功！已将 ${count} 个终端迁往新维度: ${room} (存活 ${seconds}s)`,
+            migrateFail: "❌ 跃迁失败",
+            commandFail: "❌ 指令发送失败 / 网络已断开",
+            haltConfirmOn: "⚠️ 启用紧急暂停?\n\n警告:此操作将瞬间清退全站用户、抹除白名单,并触发底层断网封锁!",
+            haltConfirmOff: "解除紧急暂停?\n\n确认恢复系统的外部接入通道?",
+            haltedToast: "🚨 指令已下达:系统已彻底封锁,连接斩断中!",
+            resumedToast: "✅ 指令已下达:紧急暂停解除,大门重新开启!"
+        },
+        en: {
+            title: "Situational Awareness Console",
+            loginTitle: "Kernel Authentication",
+            passPlaceholder: "Enter key",
+            unlock: "Unlock",
+            dashboardTitle: "Situational Awareness Engine · V6",
+            nodes: "Nodes",
+            sessions: "Sessions",
+            lock: "🔒 Lock",
+            unlockMode: "🔓 Unlock",
+            lockTitle: "Lock: only registered temporary channels may connect",
+            unlockTitle: "Unlock: allow unknown rooms to connect",
+            seconds: "s",
+            safeTimeTitle: "Temporary channel idle timeout (seconds)",
+            newRoom: "⚡ New Room",
+            newRoomTitle: "Generate a temporary random channel",
+            migrateAll: "🌀 Move All",
+            migrateAllTitle: "Force all users into a new random room",
+            halt: "Emergency Halt",
+            resume: "🟢 Resume",
+            haltTitle: "Emergency halt: remove all users and block external access",
+            resumeTitle: "Disable emergency halt and restore external access",
+            diagTitle: "Temporary room count / client-server clock offset / last pull time",
+            diag: "Channels",
+            skew: "Skew",
+            pulled: "Pulled",
+            tempRooms: "Active temporary channels",
+            thTerminal: "Terminal",
+            thSession: "Session",
+            thRoom: "Room",
+            thProbe: "Probe",
+            thOnline: "Online Time",
+            thStatus: "Status",
+            thControl: "Control",
+            system: "OS",
+            browser: "Browser",
+            hardware: "Hardware",
+            core: " cores/",
+            fingerprint: "Fingerprint",
+            waitingProbe: "Waiting for probe data...",
+            copyRoomTitle: "Click to copy channel link",
+            idle: "Idle",
+            copiedRoomLink: room => `🔗 Channel link copied: ${room}`,
+            noTempRooms: "No active temporary channels. Idle timers will appear here after creation.",
+            secSuffix: "s",
+            bannedId: "ID banned",
+            online: "Online",
+            active: "Active",
+            unban: "Unban",
+            ban: "Ban",
+            banIp: "Ban IP",
+            folded: "[ Collapsed ]",
+            bannedIp: "IP banned",
+            clean: "Clean",
+            unIp: "Unban IP",
+            node: "Node",
+            unId: "Unban ID",
+            banId: "Ban ID",
+            lockedToast: "🔒 Locked: unauthorized connections will be moved to iframe cover",
+            unlockedToast: "🔓 Unlocked: unknown rooms can connect",
+            copiedRoom: (room, seconds) => `🔗 Channel copied: ${room} [idle limit ${seconds}s]`,
+            copied: "✔ Copied",
+            migrateConfirm: "⚠️ Start moving all users?\n\nThis will force all online users into a new random room and abandon the old channel.",
+            migrateOk: (count, room, seconds) => `🌀 Move complete. ${count} terminals moved to: ${room} (lifetime ${seconds}s)`,
+            migrateFail: "❌ Move failed",
+            commandFail: "❌ Command failed / network disconnected",
+            haltConfirmOn: "⚠️ Enable emergency halt?\n\nThis will immediately remove all users, clear the whitelist, and block external access.",
+            haltConfirmOff: "Disable emergency halt?\n\nRestore external access?",
+            haltedToast: "🚨 Command sent: system halted and connections are being cut.",
+            resumedToast: "✅ Command sent: emergency halt disabled."
+        }
+    };
+    const D = DICT[navigator.language.startsWith('zh') ? 'zh' : 'en'];
+    document.documentElement.lang = navigator.language.startsWith('zh') ? 'zh-CN' : 'en';
+    document.title = D.title;
+
+    function applyDashboardLocale() {
+        $('login-title').textContent = D.loginTitle;
+        $('pass-in').placeholder = D.passPlaceholder;
+        $('login-btn').textContent = D.unlock;
+        $('dashboard-title').textContent = D.dashboardTitle;
+        $('stat-nodes').textContent = D.nodes;
+        $('stat-sessions').textContent = D.sessions;
+        $('btn-lock').textContent = D.lock;
+        $('btn-lock').title = D.lockTitle;
+        $('btn-unlock').textContent = D.unlockMode;
+        $('btn-unlock').title = D.unlockTitle;
+        $('safe-time-unit').textContent = D.seconds;
+        document.querySelector('.time-input-wrap').title = D.safeTimeTitle;
+        document.querySelector('[onclick="generateTempRoom(this)"]').textContent = D.newRoom;
+        document.querySelector('[onclick="generateTempRoom(this)"]').title = D.newRoomTitle;
+        document.querySelector('[onclick="triggerSpaceJump()"]').textContent = D.migrateAll;
+        document.querySelector('[onclick="triggerSpaceJump()"]').title = D.migrateAllTitle;
+        $('btn-halt').textContent = D.halt;
+        $('btn-halt').title = D.haltTitle;
+        $('temp-diag').title = D.diagTitle;
+        $('temp-diag').innerHTML = `${D.diag} <b id="diag-count">-</b> · ${D.skew} <b id="diag-skew">-</b>ms · ${D.pulled} <b id="diag-tick">-</b>`;
+        $('temp-room-title').textContent = D.tempRooms;
+        $('th-terminal').textContent = D.thTerminal;
+        $('th-session').textContent = D.thSession;
+        $('th-room').textContent = D.thRoom;
+        $('th-probe').textContent = D.thProbe;
+        $('th-online').textContent = D.thOnline;
+        $('th-status').textContent = D.thStatus;
+        $('th-control').textContent = D.thControl;
+    }
+    applyDashboardLocale();
     let AUTH_SESSION = loadAuthSession();
     let expandedIps = new Set(); 
 
@@ -622,16 +801,16 @@
         
         const btnHalt = $('btn-halt');
         if (isHalted) {
-            btnHalt.innerHTML = '🟢 恢复运行';
+            btnHalt.innerHTML = D.resume;
             btnHalt.classList.remove('btn-danger');
             btnHalt.classList.add('btn-success');
-            btnHalt.title = "解除紧急暂停,恢复外部接入";
+            btnHalt.title = D.resumeTitle;
             btnHalt.style.boxShadow = "0 0 10px rgba(48, 209, 88, 0.3)";
         } else {
-            btnHalt.innerHTML = '紧急暂停';
+            btnHalt.innerHTML = D.halt;
             btnHalt.classList.remove('btn-success');
             btnHalt.classList.add('btn-danger');
-            btnHalt.title = "紧急暂停:清退全员并封锁外部接入";
+            btnHalt.title = D.haltTitle;
             btnHalt.style.boxShadow = "";
         }
     }
@@ -702,12 +881,12 @@
     function buildProbeHtml(device_info) {
         let html = `<div class="probe-flex">`;
         if(device_info && device_info.os) {
-            html += `<span class="chip"><i>系统</i>${escapeHtml(device_info.os)}</span>`;
-            html += `<span class="chip"><i>浏览器</i>${escapeHtml(device_info.browser)}</span>`;
-            html += `<span class="chip"><i>硬件</i>${escapeHtml(String(device_info.cpu))}核/${escapeHtml(String(device_info.ram))}G</span>`;
-            html += `<span class="chip fp" title="${escapeHtml(device_info.canvasHash || '')}"><i>指纹</i>${device_info.canvasHash ? escapeHtml(device_info.canvasHash.slice(0,8)) : 'N/A'}</span>`;
+            html += `<span class="chip"><i>${D.system}</i>${escapeHtml(device_info.os)}</span>`;
+            html += `<span class="chip"><i>${D.browser}</i>${escapeHtml(device_info.browser)}</span>`;
+            html += `<span class="chip"><i>${D.hardware}</i>${escapeHtml(String(device_info.cpu))}${D.core}${escapeHtml(String(device_info.ram))}G</span>`;
+            html += `<span class="chip fp" title="${escapeHtml(device_info.canvasHash || '')}"><i>${D.fingerprint}</i>${device_info.canvasHash ? escapeHtml(device_info.canvasHash.slice(0,8)) : 'N/A'}</span>`;
         } else {
-            html += `<span class="chip-null">等待态势数据…</span>`;
+            html += `<span class="chip-null">${D.waitingProbe}</span>`;
         }
         html += `</div>`;
         return html;
@@ -722,16 +901,16 @@
         card.dataset.safeTime = room.safe_time;
 
         card.innerHTML = `
-            <span class="trc-pwd" title="点击复制通道链接">${escapeHtml(room.pwd)}</span>
+            <span class="trc-pwd" title="${D.copyRoomTitle}">${escapeHtml(room.pwd)}</span>
             <span class="trc-timer">
-                <span class="trc-label">闲置</span><b class="trc-idle">00:00</b><span class="trc-cap-sep">/</span><span class="trc-cap">00:00</span>
+                <span class="trc-label">${D.idle}</span><b class="trc-idle">00:00</b><span class="trc-cap-sep">/</span><span class="trc-cap">00:00</span>
             </span>
         `;
 
         card.querySelector('.trc-pwd').addEventListener('click', () => {
             const url = window.location.origin + '/#' + room.pwd;
             navigator.clipboard.writeText(url).then(() => {
-                showToast(`🔗 已复制通道链接:${escapeHtml(room.pwd)}`);
+                showToast(D.copiedRoomLink(escapeHtml(room.pwd)));
             });
         });
 
@@ -779,7 +958,7 @@
         if (!temp_rooms || temp_rooms.length === 0) {
             tempList.querySelectorAll('.temp-room-card').forEach(c => c.remove());
             if (!tempList.querySelector('.temp-room-empty')) {
-                tempList.innerHTML = '<div class="temp-room-empty"><span class="pulse-dot"></span>暂无活跃临时通道(创建后将在此显示闲置秒表)</div>';
+                tempList.innerHTML = `<div class="temp-room-empty"><span class="pulse-dot"></span>${D.noTempRooms}</div>`;
             }
             return;
         }
@@ -931,12 +1110,12 @@
                     <td class="uid-text">${u.uid.slice(0,8)}</td>
                     <td class="room-text" title="${escapeHtml(u.room)}">${escapeHtml(u.room)}</td>
                     <td>${buildProbeHtml(u.device_info)}</td>
-                    <td class="time-text">${u.online_time}秒</td>
-                    <td style="text-align:center"><span class="pill ${u.is_banned ? 'p-red' : 'p-green'}">${u.is_banned ? '已封ID' : '在线'}</span></td>
+                    <td class="time-text">${u.online_time}${D.secSuffix}</td>
+                    <td style="text-align:center"><span class="pill ${u.is_banned ? 'p-red' : 'p-green'}">${u.is_banned ? D.bannedId : D.online}</span></td>
                     <td>
                         <div class="actions">
-                            <button class="btn-mac ${u.is_banned ? 'btn-success' : 'btn-danger'}" onclick="toggleBan('${u.uid}','uid',${u.is_banned})">${u.is_banned ? '解封' : '封禁'}</button>
-                            <button class="btn-mac btn-danger" onclick="toggleBan('${ip}','ip',false)">封IP</button>
+                            <button class="btn-mac ${u.is_banned ? 'btn-success' : 'btn-danger'}" onclick="toggleBan('${u.uid}','uid',${u.is_banned})">${u.is_banned ? D.unban : D.ban}</button>
+                            <button class="btn-mac btn-danger" onclick="toggleBan('${ip}','ip',false)">${D.banIp}</button>
                         </div>
                     </td>
                 `;
@@ -961,13 +1140,13 @@
                     <span style="font-size:10px; color:var(--text-muted); margin-left:6px;">(${group.sessions.length})</span>
                 </td>
                 <td></td><td></td>
-                <td><span style="color:var(--text-muted); font-size:10px; font-family:var(--font-ui)">[ 已折叠 ]</span></td>
+                <td><span style="color:var(--text-muted); font-size:10px; font-family:var(--font-ui)">${D.folded}</span></td>
                 <td></td>
-                <td style="text-align:center"><span class="pill ${group.isIpBanned ? 'p-red' : 'p-gray'}">${group.isIpBanned ? '已封IP' : '干净'}</span></td>
+                <td style="text-align:center"><span class="pill ${group.isIpBanned ? 'p-red' : 'p-gray'}">${group.isIpBanned ? D.bannedIp : D.clean}</span></td>
                 <td>
                     <div class="actions">
                         <button class="btn-mac ${group.isIpBanned ? 'btn-success' : 'btn-danger'}" onclick="event.stopPropagation(); toggleBan('${ip}','ip',${group.isIpBanned})">
-                            ${group.isIpBanned ? '解IP' : '封IP'}
+                            ${group.isIpBanned ? D.unIp : D.banIp}
                         </button>
                     </div>
                 </td>
@@ -979,15 +1158,15 @@
                 cTr.className = `row-child ${isExpanded ? 'expanded' : ''}`;
                 
                 cTr.innerHTML = `
-                    <td><span class="tree-line"></span><span style="color:var(--text-muted); font-size:10px; font-weight:600;">节点</span></td>
+                    <td><span class="tree-line"></span><span style="color:var(--text-muted); font-size:10px; font-weight:600;">${D.node}</span></td>
                     <td class="uid-text">${u.uid.slice(0,8)}</td>
                     <td class="room-text" title="${escapeHtml(u.room)}">${escapeHtml(u.room)}</td>
                     <td>${buildProbeHtml(u.device_info)}</td>
-                    <td class="time-text">${u.online_time}秒</td>
-                    <td style="text-align:center"><span class="pill ${u.is_banned ? 'p-red' : 'p-green'}">${u.is_banned ? '已封ID' : '活跃'}</span></td>
+                    <td class="time-text">${u.online_time}${D.secSuffix}</td>
+                    <td style="text-align:center"><span class="pill ${u.is_banned ? 'p-red' : 'p-green'}">${u.is_banned ? D.bannedId : D.active}</span></td>
                     <td>
                         <div class="actions">
-                            <button class="btn-mac ${u.is_banned ? 'btn-success' : 'btn-danger'}" onclick="toggleBan('${u.uid}','uid',${u.is_banned})">${u.is_banned ? '解ID' : '封ID'}</button>
+                            <button class="btn-mac ${u.is_banned ? 'btn-success' : 'btn-danger'}" onclick="toggleBan('${u.uid}','uid',${u.is_banned})">${u.is_banned ? D.unId : D.banId}</button>
                         </div>
                     </td>
                 `;
@@ -1015,7 +1194,7 @@
             });
             const data = await res.json();
             if (data.status === 'ok') {
-                showToast(isLocked ? "🔒 已上锁:执行 IFRAME 伪装清退未授权连接" : "🔓 解除拦截:允许未知房间接入", isLocked ? 'var(--orange)' : 'var(--green)');
+                showToast(isLocked ? D.lockedToast : D.unlockedToast, isLocked ? 'var(--orange)' : 'var(--green)');
                 updateLockUI(data.locked);
                 fetchData();
             }
@@ -1039,12 +1218,12 @@
                 const roomUrl = window.location.origin + "/#" + data.room_pwd;
                 await navigator.clipboard.writeText(roomUrl);
                 
-                showToast(`🔗 已复制通道:${data.room_pwd} [闲置上限 ${safeTimeVal} 秒]`, 'var(--cyan)');
+                showToast(D.copiedRoom(data.room_pwd, safeTimeVal), 'var(--cyan)');
                 
                 try { new Audio('/static/ios-bell.mp3').play(); } catch(e){}
                 
                 const originalText = btn.innerHTML;
-                btn.innerHTML = '✔ 已复制';
+                btn.innerHTML = D.copied;
                 btn.style.color = 'var(--green)';
                 btn.style.borderColor = 'rgba(48, 209, 88, 0.4)';
                 setTimeout(() => {
@@ -1059,7 +1238,7 @@
     // 空间跳跃核心逻辑 (携带 safe_time 参数)
     window.triggerSpaceJump = async () => {
         if (!hasAuthSession()) return;
-        if(!confirm("⚠️ 警告：是否启动全体转移？\n\n此操作将强行把当前所有在线用户转移至一个全新的随机房间，旧通道将被彻底抛弃和抹除。")) return;
+        if(!confirm(D.migrateConfirm)) return;
         
         // 1. 获取输入框的存活时间，如果没有或无效则回退至 180 秒
         const safeTimeVal = parseInt($('in-safe-time').value) || 180;
@@ -1073,14 +1252,14 @@
             const data = await res.json();
             
             if (data.status === 'ok') {
-                showToast(`🌀 跃迁成功！已将 ${data.targets_moved} 个终端迁往新维度: ${data.new_room} (存活 ${safeTimeVal}s)`, "var(--purple)");
+                showToast(D.migrateOk(data.targets_moved, data.new_room, safeTimeVal), "var(--purple)");
                 fetchData();
             } else {
-                showToast("❌ 跃迁失败", "var(--red)");
+                showToast(D.migrateFail, "var(--red)");
             }
         } catch(e) {
             console.error("空间跳跃错误:", e);
-            showToast("❌ 指令发送失败 / 网络已断开", "var(--red)");
+            showToast(D.commandFail, "var(--red)");
         }
     };
 
@@ -1088,8 +1267,8 @@
         if (!hasAuthSession()) return;
         
         const actionText = currentHaltState 
-            ? "解除紧急暂停?\n\n确认恢复系统的外部接入通道?" 
-            : "⚠️ 启用紧急暂停?\n\n警告:此操作将瞬间清退全站用户、抹除白名单,并触发底层断网封锁!";
+            ? D.haltConfirmOff
+            : D.haltConfirmOn;
             
         if(!confirm(actionText)) return;
         
@@ -1099,7 +1278,7 @@
             
             if (data.status === 'ok') {
                 if (data.action === 'halted') {
-                    showToast("🚨 指令已下达:系统已彻底封锁,连接斩断中!", "var(--red)");
+                    showToast(D.haltedToast, "var(--red)");
                     updateLockUI(true);
                     
                     const appPanel = document.querySelector('.mac-app');
@@ -1109,14 +1288,14 @@
                         appPanel.style.boxShadow = originalBoxShadow || "0 60px 100px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.1)";
                     }, 800);
                 } else {
-                    showToast("✅ 指令已下达:紧急暂停解除,大门重新开启!", "var(--green)");
+                    showToast(D.resumedToast, "var(--green)");
                 }
                 
                 fetchData();
             }
         } catch(e) {
             console.error("HALT 切换错误:", e);
-            showToast("❌ 指令发送失败 / 网络已断开", "var(--red)");
+            showToast(D.commandFail, "var(--red)");
         }
     }
 
