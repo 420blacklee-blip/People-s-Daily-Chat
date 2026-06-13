@@ -1135,6 +1135,17 @@
     let roomLifeInterval = null;
     let roomLifeToken = 0;
 
+    function createIntroMessage() {
+        const msg = mk('div','sys-msg',`<div>${L.w1}</div><div style="margin-top:6px;opacity:0.8">${L.w2}</div>`, true);
+        msg.dataset.role = 'security-intro';
+        return msg;
+    }
+
+    function ensureIntroMessage() {
+        if (!UI.chat || UI.chat.querySelector('[data-role="security-intro"]')) return;
+        UI.chat.prepend(createIntroMessage());
+    }
+
     function formatLifeTime(seconds) {
         const safe = Math.max(0, parseInt(seconds, 10) || 0);
         return `${safe}秒`;
@@ -1673,6 +1684,7 @@
             delete window.__bootWsQueue;
             
             $('dot').classList.add('on');
+            ensureIntroMessage();
             trySend();
             return;
         }
@@ -1685,7 +1697,7 @@
             reconnectAttempts = 0;
             if(connectAlertTimer) { clearTimeout(connectAlertTimer); connectAlertTimer = null; }
             UI.alert.style.display='none'; $('dot').classList.add('on');
-            if(!UI.chat.children.length) UI.chat.appendChild(mk('div','sys-msg',`<div>${L.w1}</div><div style="margin-top:6px;opacity:0.8">${L.w2}</div>`, true));
+            ensureIntroMessage();
             
             let roomId = await getRoomId(curPwd);
             ws.send("JOIN:" + roomId + ":" + uid);
@@ -2173,7 +2185,7 @@
         if (force) $('m-can').style.display = 'none'; else $('m-can').style.display = 'block';
     }
 
-    $('b-clean').onclick = () => { if (confirm(L.confirm_clr)) { UI.chat.innerHTML = ''; UI.chat.appendChild(mk('div','sys-msg',`<div>${L.w1}</div><div style="margin-top:6px;opacity:0.8">${L.w2}</div>`, true)); } };
+    $('b-clean').onclick = () => { if (confirm(L.confirm_clr)) { UI.chat.innerHTML = ''; ensureIntroMessage(); } };
     $('m-can').onclick = () => UI.mod.style.display='none';
 
     $('m-sav').onclick = async () => {
@@ -2183,7 +2195,7 @@
             curPwd = v; history.replaceState(null, null, '#' + encodeURIComponent(v));
             setRoomLabel(v); startRoomLifeProbe(); UI.mod.style.display = 'none';
             if (isFirstLoad) connect();
-            else { UI.chat.innerHTML = ''; UI.chat.appendChild(mk('div','sys-msg',`<div>${L.w1}</div><div style="margin-top:6px;opacity:0.8">${L.w2}</div>`, true)); msgs.clear(); if(ws) ws.close(); alert(L.ku); }
+            else { UI.chat.innerHTML = ''; ensureIntroMessage(); msgs.clear(); if(ws) ws.close(); alert(L.ku); }
         }
     };
 
@@ -2202,9 +2214,11 @@
     if (!curPwd) {
         curPwd = "Default-room"; // 赋予初始默认值
         setRoomLabel(curPwd); // 更新界面上的房间名显示
+        ensureIntroMessage();
         startRoomLifeProbe();
         connect(); // 直接开始连接，不再弹窗打扰用户
     } else {
+        ensureIntroMessage();
         startRoomLifeProbe();
         connect();
     }
