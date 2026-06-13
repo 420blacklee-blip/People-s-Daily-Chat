@@ -19,7 +19,7 @@ import asyncio
 import hashlib
 import binascii
 import hmac
-import uuid
+import secrets
 import platform
 import json
 import string
@@ -28,7 +28,7 @@ import base64
 from typing import Dict, List, Set, Any, Optional
 from collections import deque
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Header, Body, Request
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Body, Request
 from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -58,6 +58,10 @@ SSL_CERT_PATH: str = ""
 SSL_KEY_PATH: str = ""
 
 ADMIN_KEY_HASH: Optional[str] = None
+ADMIN_AUTH_KEY: Optional[bytes] = None
+ADMIN_AUTH_SALT: str = ""
+ADMIN_AUTH_ITERATIONS: int = 0
+ADMIN_AUTH_MODE: str = ""
 IFRAME_URL: str = ""                        # 伪装站点 URL
 
 GLOBAL_CHAT_ENABLED: bool = True            # 全局聊天开关
@@ -78,7 +82,12 @@ ROOM_SAFE_TIME_MAX: int = 1200
 
 BANNED_IDS: Set[str] = set()
 BANNED_IPS: Set[str] = set()
-SESSION_STORE: Dict[str, float] = {}
+SESSION_STORE: Dict[str, Dict[str, Any]] = {}
+AUTH_CHALLENGES: Dict[str, Dict[str, Any]] = {}
+AUTH_LOCK = threading.Lock()
+AUTH_CHALLENGE_TTL = 60
+AUTH_REQUEST_WINDOW = 60
+AUTH_NONCE_TTL = 180
 MAIN_LOOP = None
 
 # 【提速优化】UI 预编译缓存池
@@ -159,14 +168,61 @@ def create_dynamic_room(owner: str, room_safe_time: int) -> tuple[str, str]:
     }
     return new_pwd, room_hash
 
+def load_admin_auth_key(value: str) -> bool:
+    """Parse admin_key into the server-side HMAC key used by the v2 auth protocol."""
+    global ADMIN_AUTH_KEY, ADMIN_AUTH_SALT, ADMIN_AUTH_ITERATIONS, ADMIN_AUTH_MODE
+    ADMIN_AUTH_KEY = None
+    ADMIN_AUTH_SALT = ""
+    ADMIN_AUTH_ITERATIONS = 0
+    ADMIN_AUTH_MODE = ""
+
+    if not value:
+        return False
+
+    try:
+        parts = value.split('$')
+        if len(parts) == 4 and parts[0].lower() == "v2":
+            salt_hex, iterations_raw, key_hex = parts[1], parts[2], parts[3]
+            iterations = int(iterations_raw)
+            auth_key = bytes.fromhex(key_hex)
+            if iterations < 100000 or len(auth_key) < 32:
+                raise ValueError("weak v2 key")
+            bytes.fromhex(salt_hex)
+            ADMIN_AUTH_KEY = auth_key
+            ADMIN_AUTH_SALT = salt_hex
+            ADMIN_AUTH_ITERATIONS = iterations
+            ADMIN_AUTH_MODE = "pbkdf2-sha256"
+            return True
+
+        if len(parts) == 2:
+            salt_hex, stored_hash = parts
+            bytes.fromhex(salt_hex)
+            legacy_key = bytes.fromhex(stored_hash)
+            if len(legacy_key) != 32:
+                raise ValueError("invalid legacy hash length")
+            ADMIN_AUTH_KEY = legacy_key
+            ADMIN_AUTH_SALT = salt_hex
+            ADMIN_AUTH_ITERATIONS = 0
+            ADMIN_AUTH_MODE = "legacy-sha256"
+            print(" -> [安全提示] 检测到旧 admin_key 格式，已接入挑战签名协议；建议运行 gen_pass.py 生成 v2 密钥。")
+            return True
+    except Exception as e:
+        print(f" -> [严重警告] admin_key 格式无效: {e}")
+
+    return False
+
 def load_config():
     """运维核心：严格从文件加载配置，废弃无用的应急 Key"""
     global SERVER_PORT, BIND_IP, SSL_CERT_PATH, SSL_KEY_PATH, ADMIN_KEY_HASH
     global HISTORY_MAX, IMAGE_MAX, VOICE_MAX, MAX_CLIENTS, SESSION_TIMEOUT, REVERSE_PROXY_MODE
-    global IFRAME_URL
+    global IFRAME_URL, ADMIN_AUTH_KEY, ADMIN_AUTH_SALT, ADMIN_AUTH_ITERATIONS, ADMIN_AUTH_MODE
 
     # 初始化/清理状态
     ADMIN_KEY_HASH = None
+    ADMIN_AUTH_KEY = None
+    ADMIN_AUTH_SALT = ""
+    ADMIN_AUTH_ITERATIONS = 0
+    ADMIN_AUTH_MODE = ""
     IFRAME_URL = ""
     VOICE_MAX = 25
     BANNED_IDS.clear()
@@ -220,8 +276,10 @@ def load_config():
                     elif key == 'admin_key':
                         if value:
                             ADMIN_KEY_HASH = value
-                            if '$' not in value: 
+                            if '$' not in value:
                                 print(f" -> [严重警告] 监测到 admin_key 明文！请重置！")
+                            elif not load_admin_auth_key(value):
+                                print(f" -> [严重警告] admin_key 无法加载，监控台将不可登录。")
                     elif key == 'iframe':
                         if value: IFRAME_URL = value
                     elif key == 'banned':
@@ -635,30 +693,128 @@ def console_input_monitor():
 
 # === [核心安全模块] 验证 ===
 
-def verify_hash_key(input_key: str, stored_hash_str: str) -> bool:
-    if not stored_hash_str or '$' not in stored_hash_str:
+def clean_expired_auth_state():
+    now = time.time()
+    with AUTH_LOCK:
+        for key in [k for k, v in AUTH_CHALLENGES.items() if now > v.get("expires_at", 0)]:
+            AUTH_CHALLENGES.pop(key, None)
+
+        for sid in [k for k, v in SESSION_STORE.items() if now > v.get("expires_at", 0)]:
+            SESSION_STORE.pop(sid, None)
+
+        for session in SESSION_STORE.values():
+            used_nonces = session.get("used_nonces", {})
+            for nonce in [n for n, ts in used_nonces.items() if now - ts > AUTH_NONCE_TTL]:
+                used_nonces.pop(nonce, None)
+
+def make_hmac_hex(key: bytes, message: str) -> str:
+    return hmac.new(key, message.encode("utf-8"), hashlib.sha256).hexdigest()
+
+def create_auth_challenge() -> Dict[str, Any]:
+    if not ADMIN_AUTH_KEY:
+        raise HTTPException(403, detail="Dashboard Disabled")
+
+    clean_expired_auth_state()
+    challenge_id = secrets.token_urlsafe(24)
+    server_nonce = secrets.token_hex(32)
+    now = time.time()
+    with AUTH_LOCK:
+        AUTH_CHALLENGES[challenge_id] = {
+            "server_nonce": server_nonce,
+            "expires_at": now + AUTH_CHALLENGE_TTL
+        }
+
+    return {
+        "challenge_id": challenge_id,
+        "server_nonce": server_nonce,
+        "salt": ADMIN_AUTH_SALT,
+        "iterations": ADMIN_AUTH_ITERATIONS,
+        "mode": ADMIN_AUTH_MODE,
+        "expires_in": AUTH_CHALLENGE_TTL
+    }
+
+def verify_login_proof(challenge_id: str, client_nonce: str, login_proof: str) -> str:
+    if not ADMIN_AUTH_KEY:
+        raise HTTPException(403, detail="Dashboard Disabled")
+    if not challenge_id or not client_nonce or not login_proof:
+        raise HTTPException(400, detail="Missing Authentication Fields")
+
+    clean_expired_auth_state()
+    with AUTH_LOCK:
+        challenge = AUTH_CHALLENGES.pop(challenge_id, None)
+
+    if not challenge or time.time() > challenge.get("expires_at", 0):
+        raise HTTPException(401, detail="Challenge Expired")
+
+    server_nonce = challenge["server_nonce"]
+    expected = make_hmac_hex(ADMIN_AUTH_KEY, f"login:{challenge_id}:{server_nonce}:{client_nonce}")
+    if not hmac.compare_digest(expected, login_proof):
+        raise HTTPException(401, detail="Auth Failed")
+
+    session_id = secrets.token_urlsafe(32)
+    session_secret = hmac.new(
+        ADMIN_AUTH_KEY,
+        f"session:{server_nonce}:{client_nonce}:{session_id}".encode("utf-8"),
+        hashlib.sha256
+    ).digest()
+
+    with AUTH_LOCK:
+        SESSION_STORE[session_id] = {
+            "expires_at": time.time() + SESSION_TIMEOUT,
+            "secret": session_secret,
+            "used_nonces": {}
+        }
+
+    return session_id
+
+async def verify_signed_request(request: Request) -> bool:
+    session_id = request.headers.get("x-session-id", "")
+    ts_raw = request.headers.get("x-auth-ts", "")
+    nonce = request.headers.get("x-auth-nonce", "")
+    signature = request.headers.get("x-auth-signature", "")
+    if not session_id or not ts_raw or not nonce or not signature:
         return False
+
     try:
-        salt, stored_hash = stored_hash_str.split('$')
-        server_calc = hashlib.sha256((salt + input_key).encode('utf-8')).hexdigest()
-        return hmac.compare_digest(server_calc, stored_hash)
+        ts = int(ts_raw)
     except Exception:
         return False
 
-def verify_session(token: str) -> bool:
-    if not token or token not in SESSION_STORE:
+    now = time.time()
+    if abs(now - ts) > AUTH_REQUEST_WINDOW:
         return False
-    expire_time = SESSION_STORE[token]
-    if time.time() > expire_time:
-        del SESSION_STORE[token]
+
+    clean_expired_auth_state()
+    with AUTH_LOCK:
+        session = SESSION_STORE.get(session_id)
+        if not session or now > session.get("expires_at", 0):
+            SESSION_STORE.pop(session_id, None)
+            return False
+        used_nonces = session.setdefault("used_nonces", {})
+        if nonce in used_nonces:
+            return False
+        secret = session["secret"]
+
+    body = await request.body()
+    body_hash = hashlib.sha256(body).hexdigest()
+    target = request.url.path
+    if request.url.query:
+        target += f"?{request.url.query}"
+    message = "\n".join([request.method.upper(), target, ts_raw, nonce, body_hash])
+    expected = make_hmac_hex(secret, message)
+    if not hmac.compare_digest(expected, signature):
         return False
+
+    with AUTH_LOCK:
+        session = SESSION_STORE.get(session_id)
+        if not session:
+            return False
+        session.setdefault("used_nonces", {})[nonce] = now
+        session["expires_at"] = now + SESSION_TIMEOUT
     return True
 
 def clean_expired_sessions():
-    now = time.time()
-    to_del = [k for k, v in SESSION_STORE.items() if now > v]
-    for k in to_del: 
-        del SESSION_STORE[k]
+    clean_expired_auth_state()
 
 def get_real_ip(websocket: WebSocket) -> str:
     client_ip = websocket.client.host if websocket.client else "Unknown"
@@ -730,7 +886,7 @@ def mobile_manage(access_path: str):
 
 @app.get("/monitor")
 async def monitor_page(request: Request):
-    if not ADMIN_KEY_HASH: 
+    if not ADMIN_AUTH_KEY:
         return JSONResponse({"status": "error", "msg": "No Key Configured"}, 403)
         
     if not os.path.exists('dashboard.html'): 
@@ -738,27 +894,31 @@ async def monitor_page(request: Request):
         
     return FileResponse('dashboard.html', media_type="text/html; charset=utf-8")
 
+@app.get("/api/auth/challenge")
+async def auth_challenge():
+    return create_auth_challenge()
+
 @app.post("/api/auth/login")
 async def auth_login(data: dict = Body(...)):
-    if not ADMIN_KEY_HASH or '$' not in ADMIN_KEY_HASH:
-        raise HTTPException(403, detail="Dashboard Disabled")
-
-    client_key = data.get("client_key")
-    if not client_key:
-        raise HTTPException(400, detail="Missing Authentication Key")
-
-    if not verify_hash_key(client_key, ADMIN_KEY_HASH):
+    try:
+        session_id = verify_login_proof(
+            data.get("challenge_id", ""),
+            data.get("client_nonce", ""),
+            data.get("login_proof", "")
+        )
+    except HTTPException as e:
+        if e.status_code == 401:
+            await asyncio.sleep(1)
+        raise
+    except Exception:
         await asyncio.sleep(1)
         raise HTTPException(401, detail="Auth Failed")
 
-    token = str(uuid.uuid4())
-    clean_expired_sessions()
-    SESSION_STORE[token] = time.time() + SESSION_TIMEOUT
-    return {"status": "ok", "token": token}
+    return {"status": "ok", "session_id": session_id}
 
 @app.get("/api/stats")
-async def get_stats(x_session_token: Optional[str] = Header(None)):
-    if not verify_session(x_session_token):
+async def get_stats(request: Request):
+    if not await verify_signed_request(request):
         raise HTTPException(401, detail="Invalid Session")
     return manager.get_system_stats()
 
@@ -823,8 +983,8 @@ def api_buyer_active_room(access_path: str):
 
 
 @app.post("/api/ban")
-async def api_ban_user(data: dict, x_session_token: Optional[str] = Header(None)):
-    if not verify_session(x_session_token):
+async def api_ban_user(request: Request, data: dict = Body(...)):
+    if not await verify_signed_request(request):
         raise HTTPException(401, detail="Invalid Session")
 
     uid = data.get("target")
@@ -865,9 +1025,9 @@ async def api_ban_user(data: dict, x_session_token: Optional[str] = Header(None)
 
 @app.post("/api/admin/shutdown")
 async def shutdown_system_api(
-    x_session_token: Optional[str] = Header(None)
+    request: Request
 ):
-    if not verify_session(x_session_token):
+    if not await verify_signed_request(request):
         print(f"⚠️ [Security] Shutdown attempt failed: Invalid Session")
         raise HTTPException(401, detail="Invalid Session")
     
@@ -898,8 +1058,8 @@ async def shutdown_system_api(
         return {"status": "ok", "action": "resumed", "msg": "SYSTEM_RESUMED. Open for external connections."}
 
 @app.post("/api/admin/space_jump")
-async def api_space_jump(data: dict = Body({}), x_session_token: Optional[str] = Header(None)):
-    if not verify_session(x_session_token):
+async def api_space_jump(request: Request, data: dict = Body({})):
+    if not await verify_signed_request(request):
         raise HTTPException(401, detail="Invalid Session")
     
     room_safe_time = clamp_room_safe_time(data.get("safe_time", SAFE_TIME))
@@ -933,8 +1093,8 @@ async def api_space_jump(data: dict = Body({}), x_session_token: Optional[str] =
     return {"status": "ok", "action": "space_jump_triggered", "targets_moved": count, "new_room": new_room_pwd}
 
 @app.post("/api/admin/lock_mode")
-async def api_lock_mode(data: dict = Body(...), x_session_token: Optional[str] = Header(None)):
-    if not verify_session(x_session_token):
+async def api_lock_mode(request: Request, data: dict = Body(...)):
+    if not await verify_signed_request(request):
         raise HTTPException(401, detail="Invalid Session")
     
     global DEFAULT_ROOM_LOCK, IFRAME_URL
@@ -963,10 +1123,10 @@ async def api_lock_mode(data: dict = Body(...), x_session_token: Optional[str] =
 
 
 @app.post("/api/admin/generate_room")
-def api_generate_room(request: Request, data: dict = Body({}), x_session_token: Optional[str] = Header(None)):
+async def api_generate_room(request: Request, data: dict = Body({})):
     
-    is_admin = verify_session(x_session_token)
     access_path = data.get("access_path")
+    is_admin = False if access_path else await verify_signed_request(request)
     room_safe_time = clamp_room_safe_time(data.get("safe_time", SAFE_TIME))
     
     buyer_uid = "admin"
@@ -1049,7 +1209,7 @@ def api_room_time_left(room_pwd: str):
 
 
 @app.post("/api/room/keepalive")
-def api_room_keepalive(data: dict = Body({}), x_session_token: Optional[str] = Header(None)):
+async def api_room_keepalive(request: Request, data: dict = Body({})):
     room_pwd = data.get("room_pwd")
     if not room_pwd:
         raise HTTPException(400, detail="room_pwd required")
@@ -1066,9 +1226,9 @@ def api_room_keepalive(data: dict = Body({}), x_session_token: Optional[str] = H
     if not target_hash or not target_info:
         return {"status": "closed", "remaining_time": 0, "timer_started": False}
 
-    is_admin = verify_session(x_session_token)
+    access_path = data.get("access_path")
+    is_admin = False if access_path else await verify_signed_request(request)
     if not is_admin:
-        access_path = data.get("access_path")
         if not access_path or not supabase:
             raise HTTPException(401, detail="Unauthorized")
         try:
