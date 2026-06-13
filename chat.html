@@ -606,6 +606,37 @@
         @keyframes slideDown { from{opacity:0; transform:translate(-50%,-30px);} to{opacity:1; transform:translate(-50%,0);} }
         @keyframes glow { 50% { box-shadow: 0 0 15px rgba(255,69,58,0.2); } }
 
+        #app-toast {
+            position: fixed;
+            top: calc(env(safe-area-inset-top) + 18px);
+            left: 50%;
+            z-index: 120;
+            max-width: min(86vw, 420px);
+            padding: 11px 16px;
+            border-radius: 999px;
+            border: 1px solid rgba(145,226,255,0.26);
+            background:
+                radial-gradient(circle at 18% 0%, rgba(255,255,255,0.20), transparent 38%),
+                linear-gradient(180deg, rgba(255,255,255,0.13), rgba(255,255,255,0.038)),
+                rgba(12,18,30,0.58);
+            color: rgba(245,250,255,0.92);
+            font-size: 13px;
+            font-weight: 720;
+            line-height: 1.35;
+            text-align: center;
+            box-shadow: 0 18px 45px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.28);
+            backdrop-filter: blur(18px) saturate(220%) brightness(1.06);
+            -webkit-backdrop-filter: blur(18px) saturate(220%) brightness(1.06);
+            opacity: 0;
+            pointer-events: none;
+            transform: translate(-50%, -14px) scale(0.96);
+            transition: opacity 0.24s ease, transform 0.24s cubic-bezier(0.2, 0.9, 0.2, 1), border-color 0.24s ease, color 0.24s ease;
+        }
+        #app-toast.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
+        #app-toast.success { border-color: rgba(54,211,153,0.38); color: rgba(218,255,236,0.96); box-shadow: 0 18px 45px rgba(0,0,0,0.35), 0 0 24px rgba(54,211,153,0.16), inset 0 1px 0 rgba(255,255,255,0.28); }
+        #app-toast.warn { border-color: rgba(255,211,106,0.42); color: rgba(255,241,205,0.96); box-shadow: 0 18px 45px rgba(0,0,0,0.35), 0 0 24px rgba(255,211,106,0.14), inset 0 1px 0 rgba(255,255,255,0.28); }
+        #app-toast.error { border-color: rgba(255,90,99,0.42); color: rgba(255,218,222,0.96); box-shadow: 0 18px 45px rgba(0,0,0,0.35), 0 0 24px rgba(255,90,99,0.16), inset 0 1px 0 rgba(255,255,255,0.28); }
+
         #modal { position: fixed; inset: 0; z-index: 100; background: rgba(3,6,14,0.62); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); display: none; justify-content: center; align-items: center; animation: fade 0.2s; }
         .card { background: linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0.045)), rgba(12,17,30,0.46); border: 1px solid rgba(255,255,255,0.22); width: 85%; max-width: 320px; padding: 30px; border-radius: 30px; text-align: center; animation: pop 0.3s; box-shadow: 0 26px 78px rgba(0,0,0,0.56), inset 0 1px 0 rgba(255,255,255,0.30), inset 0 -1px 0 rgba(255,255,255,0.06); backdrop-filter: blur(34px) saturate(215%) brightness(1.06); -webkit-backdrop-filter: blur(34px) saturate(215%) brightness(1.06); }
         @keyframes pop { from { transform: scale(0.8); } to { transform: scale(1); } }
@@ -655,7 +686,7 @@
         }
 
         @media (prefers-reduced-motion: reduce) {
-            .bg-anim, h1, .row, .sys-msg, #alert, #modal, .card, #reply-bar {
+            .bg-anim, h1, .row, .sys-msg, #alert, #app-toast, #modal, .card, #reply-bar {
                 animation: none !important;
             }
             #chat { scroll-behavior: auto; }
@@ -664,6 +695,7 @@
 </head>
 <body>
 <div class="bg-anim"></div>
+<div id="app-toast" role="status" aria-live="polite"></div>
 <div id="app">
     <header>
         <div>
@@ -852,8 +884,8 @@
     const VOICE_PAUSE_ICON = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/></svg>`;
 
     const T = {
-        zh: { w1:"⚡ 采用 <strong style='color:#66b3ff'>AES-GCM E2EE</strong> 端到端加密", w2:"语音、图片与文字均在浏览器端加密", pre:"当前房间: ", clean:"重置聊天ID", rec:"等待重新链接...", pt:"发送语音", et:"发送图片", ph:"发送加密消息...", mtk:"进入房间", mdk:"房间与房间隔离<br>同房间下可聊天", mtkp:"房间名称...", can:"取消", sav:"应用", ku:"密钥已更新", ne:"上传中断：处理超时 (3s)", nc:"未连接", comp:"图片处理中...", big:"图片过大无法压缩", onl:"一次最多12张", wait:"等待网络: ", confirm_clr: "重置聊天ID将清空当前聊天记录，并以新身份重新进入房间。每24小时只能执行一次。是否继续？", reset_wait:"ID重置冷却中，还需 ", reset_done:"ID已重置，正在以新身份重新进入房间。", ban: "🚫 您的IP已被封禁", vuns:"当前浏览器不支持语音录制，请更换新版 Chrome / Firefox / Safari。", vden:"麦克风权限被拒绝，无法录音。", vbig:"语音过大，请重录。", vrec:"正在录音，最多30秒", vrecShort:"录音中", vready:"待发送", vproc:"语音处理中..." },
-        en: { w1:"⚡ Using <strong style='color:#66b3ff'>AES-GCM E2EE</strong> Encryption", w2:"Voice, images and text are encrypted in your browser", pre:"current room: ", clean:"Reset ID", rec:"reconnection...", pt:"Record voice", et:"Send Image", ph:"Type encrypted message...", mtk:"Create a room", mdk:"Unable to communicate between different rooms", mtkp:"Room name...", can:"Cancel", sav:"Apply", ku:"Key Updated", ne:"Aborted: Timeout (3s)", nc:"Not Connected", comp:"Processing...", big:"Image too large", onl:"Max 12 images", wait:"Waiting: ", confirm_clr: "Reset ID will clear the current chat and rejoin with a new identity. This is allowed once every 24 hours. Continue?", reset_wait:"ID reset is cooling down. Time left: ", reset_done:"ID reset. Rejoining with a new identity.", ban: "🚫 You are BANNED", vuns:"Voice recording is not supported in this browser. Please use a recent Chrome / Firefox / Safari.", vden:"Microphone permission was denied.", vbig:"Voice file is too large. Please record again.", vrec:"Recording, max 30 seconds", vrecShort:"Recording", vready:"Ready", vproc:"Processing voice..." }
+        zh: { w1:"⚡ 采用 <strong style='color:#66b3ff'>AES-GCM E2EE</strong> 端到端加密", w2:"语音、图片与文字均在浏览器端加密", pre:"当前房间: ", clean:"重置聊天ID", rec:"等待重新链接...", pt:"发送语音", et:"发送图片", ph:"发送加密消息...", mtk:"进入房间", mdk:"房间与房间隔离<br>同房间下可聊天", mtkp:"房间名称...", can:"取消", sav:"应用", ku:"密钥已更新", ne:"上传中断：处理超时 (3s)", nc:"未连接", comp:"图片处理中...", big:"图片过大无法压缩", onl:"一次最多12张", wait:"等待网络: ", reset_wait:"ID重置冷却中，还需 ", reset_done:"ID已重置，正在以新身份重新进入房间。", reset_failed:"ID重置失败，请稍后再试。", reset_busy:"正在重置ID，请稍候。", ban: "🚫 您的IP已被封禁", vuns:"当前浏览器不支持语音录制，请更换新版 Chrome / Firefox / Safari。", vden:"麦克风权限被拒绝，无法录音。", vbig:"语音过大，请重录。", vrec:"正在录音，最多30秒", vrecShort:"录音中", vready:"待发送", vproc:"语音处理中..." },
+        en: { w1:"⚡ Using <strong style='color:#66b3ff'>AES-GCM E2EE</strong> Encryption", w2:"Voice, images and text are encrypted in your browser", pre:"current room: ", clean:"Reset ID", rec:"reconnection...", pt:"Record voice", et:"Send Image", ph:"Type encrypted message...", mtk:"Create a room", mdk:"Unable to communicate between different rooms", mtkp:"Room name...", can:"Cancel", sav:"Apply", ku:"Key Updated", ne:"Aborted: Timeout (3s)", nc:"Not Connected", comp:"Processing...", big:"Image too large", onl:"Max 12 images", wait:"Waiting: ", reset_wait:"ID reset is cooling down. Time left: ", reset_done:"ID reset. Rejoining with a new identity.", reset_failed:"ID reset failed. Please try again.", reset_busy:"Resetting ID. Please wait.", ban: "🚫 You are BANNED", vuns:"Voice recording is not supported in this browser. Please use a recent Chrome / Firefox / Safari.", vden:"Microphone permission was denied.", vbig:"Voice file is too large. Please record again.", vrec:"Recording, max 30 seconds", vrecShort:"Recording", vready:"Ready", vproc:"Processing voice..." }
     };
     const L = T[navigator.language.startsWith('zh')?'zh':'en'];
     const ID_RESET_COOLDOWN_MS = 24 * 60 * 60 * 1000;
@@ -1143,10 +1175,12 @@
     let isSending = false;
     let reconnectAttempts = 0;
 
-    const UI = { chat:$('chat'), txt:$('txt'), life:$('room-life'), lifeState:$('life-state'), lifeTime:$('life-time'), lifeTimeValue:$('life-time-value'), mod:$('modal'), min:$('m-in'), alert:$('alert'), fIn:$('f-in') };
+    const UI = { chat:$('chat'), txt:$('txt'), life:$('room-life'), lifeState:$('life-state'), lifeTime:$('life-time'), lifeTimeValue:$('life-time-value'), mod:$('modal'), min:$('m-in'), alert:$('alert'), toast:$('app-toast'), fIn:$('f-in') };
 
     let roomLifeInterval = null;
     let roomLifeToken = 0;
+    let appToastTimer = null;
+    let idResetBusy = false;
 
     function createIntroMessage() {
         const msg = mk('div','sys-msg',`<div>${L.w1}</div><div style="margin-top:6px;opacity:0.8">${L.w2}</div>`, true);
@@ -1157,6 +1191,18 @@
     function ensureIntroMessage() {
         if (!UI.chat || UI.chat.querySelector('[data-role="security-intro"]')) return;
         UI.chat.prepend(createIntroMessage());
+    }
+
+    function showAppToast(message, type='info') {
+        if (!UI.toast) return;
+        clearTimeout(appToastTimer);
+        UI.toast.textContent = message;
+        UI.toast.className = '';
+        UI.toast.classList.add(type);
+        requestAnimationFrame(() => UI.toast.classList.add('show'));
+        appToastTimer = setTimeout(() => {
+            UI.toast.classList.remove('show');
+        }, 3200);
     }
 
     function formatCooldown(ms) {
@@ -1178,40 +1224,51 @@
     }
 
     async function resetIdAndReconnect() {
-        const cooldownLeft = getIdResetCooldownLeft();
-        if (cooldownLeft > 0) {
-            alert(L.reset_wait + formatCooldown(cooldownLeft));
+        if (idResetBusy) {
+            showAppToast(L.reset_busy, 'warn');
             return;
         }
-        if (!confirm(L.confirm_clr)) return;
-
-        try {
-            if (typeof cancelVoiceRecording === "function") cancelVoiceRecording();
-        } catch(e) {}
-
-        msgQueue = [];
-        known.clear();
-        msgs.clear();
-        REPLAY_CACHE.clear();
-        activeReplyTarget = null;
-        $('reply-bar').style.display = 'none';
-        UI.chat.innerHTML = '';
-        ensureIntroMessage();
-
-        await generateAndStoreIdentity();
-        baseId = myIdentity.baseId;
-        uid = baseId;
-        localStorage.setItem("id_reset_last_at", String(Date.now()));
-
-        if (ws) {
-            try {
-                ws.onclose = null;
-                ws.close();
-            } catch(e) {}
+        const cooldownLeft = getIdResetCooldownLeft();
+        if (cooldownLeft > 0) {
+            showAppToast(L.reset_wait + formatCooldown(cooldownLeft), 'warn');
+            return;
         }
-        $('dot').classList.remove('on');
-        alert(L.reset_done);
-        setTimeout(connect, 350);
+
+        idResetBusy = true;
+        try {
+            try {
+                if (typeof cancelVoiceRecording === "function") cancelVoiceRecording();
+            } catch(e) {}
+
+            msgQueue = [];
+            known.clear();
+            msgs.clear();
+            REPLAY_CACHE.clear();
+            activeReplyTarget = null;
+            $('reply-bar').style.display = 'none';
+            UI.chat.innerHTML = '';
+            ensureIntroMessage();
+
+            await generateAndStoreIdentity();
+            baseId = myIdentity.baseId;
+            uid = baseId;
+            localStorage.setItem("id_reset_last_at", String(Date.now()));
+
+            if (ws) {
+                try {
+                    ws.onclose = null;
+                    ws.close();
+                } catch(e) {}
+            }
+            $('dot').classList.remove('on');
+            showAppToast(L.reset_done, 'success');
+            setTimeout(connect, 350);
+        } catch(e) {
+            console.error("ID reset failed:", e);
+            showAppToast(L.reset_failed, 'error');
+        } finally {
+            idResetBusy = false;
+        }
     }
 
     function formatLifeTime(seconds) {
@@ -2255,7 +2312,7 @@
 
     $('b-clean').onclick = () => resetIdAndReconnect().catch(e => {
         console.error("ID reset failed:", e);
-        alert("ID reset failed");
+        showAppToast(L.reset_failed, 'error');
     });
     $('m-can').onclick = () => UI.mod.style.display='none';
 
